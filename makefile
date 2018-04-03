@@ -17,7 +17,7 @@ SIZE 		= $(GCC_PREFIX)-size
 ################################################################################
 
 APP             = Sandbox
-DEVICE          = stm32l0xx
+DEVICE          = stm32l011
 
 DIR_BUILD       = build
 DIR_SRC         = src
@@ -51,10 +51,10 @@ CC_FLAGS 	+= -I./include
 CC_FLAGS 	+= -I./include/$(DEVICE)
 CC_FLAGS 	+= -isystem ./lib/CMSIS/Include
 CC_FLAGS 	+= -isystem ./lib/CMSIS/Device/ST/STM32L0xx/Include
-CC_FLAGS	+= -DSTM32L011xx
 
 OBJS		= $(DIR_BUILD)/$(APP).o $(DIR_BUILD)/Startup.o
 DEVICE_OBJS	= $(patsubst $(DIR_SRC)/$(DEVICE)/%.cpp, $(DIR_BUILD)/%.o, $(wildcard $(DIR_DEVICE_SRC)/*.cpp))
+HEADERS		= $(wildcard $(DIR_INC)/*.h)
 
 ################################################################################
 # Compilation stage
@@ -68,7 +68,7 @@ $(DIR_BUILD)/$(APP).o: $(DIR_APP)/$(APP).cpp
 $(DIR_BUILD)/Startup.o: $(DIR_SRC)/Startup.cpp
 	$(CC) -c $(CC_FLAGS) $< -o $@
 
-$(DIR_BUILD)/%.o: $(DIR_DEVICE_SRC)/%.cpp
+$(DIR_BUILD)/%.o: $(DIR_DEVICE_SRC)/%.cpp $(HEADERS)
 	$(CC) -c $(CC_FLAGS) $< -o $@
 
 ################################################################################
@@ -95,7 +95,7 @@ gdb: $(DIR_BUILD)/$(APP).elf
 	$(GDB) $(DIR_BUILD)/$(APP).elf
 
 clean:
-	rm -r $(DIR_BUILD)/*
+	rm -f $(DIR_BUILD)/*
 
 size: $(DIR_BUILD)/$(APP).elf
 	$(SIZE) $(DIR_BUILD)/$(APP).elf
