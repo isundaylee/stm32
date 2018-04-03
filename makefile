@@ -17,7 +17,7 @@ SIZE 		= $(GCC_PREFIX)-size
 ################################################################################
 
 APP             = Sandbox
-DEVICE          = stm32l011
+DEVICE          = stm32l0xx
 
 DIR_BUILD       = build
 DIR_SRC         = src
@@ -48,19 +48,19 @@ CC_FLAGS 	+= -Wold-style-cast
 CC_FLAGS 	+= -Werror
 
 CC_FLAGS 	+= -I./include
+CC_FLAGS 	+= -I./include/$(DEVICE)
 CC_FLAGS 	+= -isystem ./lib/CMSIS/Include
 CC_FLAGS 	+= -isystem ./lib/CMSIS/Device/ST/STM32L0xx/Include
 CC_FLAGS	+= -DSTM32L011xx
 
-CC_FLAGS_AS	= -target arm-none-eabi
-CC_FLAGS_AS	+= -mcpu=cortex-m0
-CC_FLAGS_AS	+= -mfloat-abi=soft
-
-OBJS		= $(DIR_BUILD)/$(APP).o $(DIR_BUILD)/Boot.o $(DIR_BUILD)/Startup.o
+OBJS		= $(DIR_BUILD)/$(APP).o $(DIR_BUILD)/Startup.o
+DEVICE_OBJS	= $(patsubst $(DIR_SRC)/$(DEVICE)/%.cpp, $(DIR_BUILD)/%.o, $(wildcard $(DIR_DEVICE_SRC)/*.cpp))
 
 ################################################################################
 # Compilation stage
 ################################################################################
+
+.SUFFIXES:
 
 $(DIR_BUILD)/$(APP).o: $(DIR_APP)/$(APP).cpp
 	$(CC) -c $(CC_FLAGS) $< -o $@
@@ -68,15 +68,15 @@ $(DIR_BUILD)/$(APP).o: $(DIR_APP)/$(APP).cpp
 $(DIR_BUILD)/Startup.o: $(DIR_SRC)/Startup.cpp
 	$(CC) -c $(CC_FLAGS) $< -o $@
 
-$(DIR_BUILD)/Boot.o: $(DIR_SRC)/Boot.s
-	$(CC) -c $(CC_FLAGS_AS) $< -o $@
+$(DIR_BUILD)/%.o: $(DIR_DEVICE_SRC)/%.cpp
+	$(CC) -c $(CC_FLAGS) $< -o $@
 
 ################################################################################
 # Linking stage
 ################################################################################
 
-$(DIR_BUILD)/$(APP).elf: $(OBJS) $(DIR_SRC)/LinkerScript.lds
-	$(LD) -T $(DIR_SRC)/LinkerScript.lds $(OBJS) $(LD_FLAGS) -o $@
+$(DIR_BUILD)/$(APP).elf: $(OBJS) $(DIR_SRC)/LinkerScript.lds $(DEVICE_OBJS)
+	$(LD) -T $(DIR_SRC)/LinkerScript.lds $(OBJS) $(DEVICE_OBJS) $(LD_FLAGS) -o $@
 
 $(DIR_BUILD)/$(APP).dump: $(DIR_BUILD)/$(APP).elf
 	$(DUMP) $< >$@
@@ -95,7 +95,7 @@ gdb: $(DIR_BUILD)/$(APP).elf
 	$(GDB) $(DIR_BUILD)/$(APP).elf
 
 clean:
-	rm -f $(DIR_BUILD)/*
+	rm -r $(DIR_BUILD)/*
 
 size: $(DIR_BUILD)/$(APP).elf
 	$(SIZE) $(DIR_BUILD)/$(APP).elf

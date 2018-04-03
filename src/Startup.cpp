@@ -1,5 +1,17 @@
 #include <stdint.h>
 
+extern "C" void _startup(void);
+
+extern "C" void _reset() { _startup(); }
+
+extern "C" void _spin() {
+  while (true) {
+    asm volatile("nop");
+  }
+}
+
+#include "Vectors.h"
+
 extern uint32_t __attribute__((may_alias)) __bss_start__;
 extern uint32_t __attribute__((may_alias)) __bss_end__;
 extern uint8_t __attribute__((may_alias)) __data_start__;
@@ -8,7 +20,7 @@ extern uint8_t __attribute__((may_alias)) __data_end__;
 
 extern "C" void main(void);
 
-extern "C" void startup(void) {
+extern "C" void _startup(void) {
   // Zero the BSS section
   for (uint32_t *p = &__bss_start__; p != &__bss_end__; p++) {
     *p = 0;

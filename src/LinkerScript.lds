@@ -8,7 +8,7 @@ SECTIONS
 {
     .text :
     {
-        build/Boot.o (.text)
+        * (.isr_vectors)
         * (.text)
         * (.rodata)
     } > flash
