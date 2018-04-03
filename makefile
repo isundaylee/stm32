@@ -36,7 +36,7 @@ CC_FLAGS	+= -mthumb
 CC_FLAGS	+= -mfloat-abi=soft
 
 CC_FLAGS	+= -g
-CC_FLAGS	+= -O2
+CC_FLAGS	+= -O3
 CC_FLAGS        += -std=c++17
 CC_FLAGS 	+= -nostdlib
 CC_FLAGS        += -ffreestanding

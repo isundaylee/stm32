@@ -26,11 +26,3 @@ void GPIO::setMode(int pin, uint32_t mode, uint32_t alternate /* = 0 */) {
   gpio_->AFR[pin / 8] &= ~(0b1111 << (4 * (pin % 8)));
   gpio_->AFR[pin / 8] |= (alternate << (4 * (pin % 8)));
 }
-
-void GPIO::set(int pin) { gpio_->BSRR = (1UL << pin); }
-
-void GPIO::clear(int pin) { gpio_->BSRR = (1UL << (pin + 16)); }
-
-void GPIO::toggle(int pin) { gpio_->ODR ^= (1UL << pin); }
-
-bool GPIO::get(int pin) { return (gpio_->IDR & (1UL << pin)) != 0; }

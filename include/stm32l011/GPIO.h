@@ -13,14 +13,19 @@ private:
 public:
   GPIO(GPIO_TypeDef *gpio) { gpio_ = gpio; }
 
+  GPIO(GPIO &&move) = delete;
+  GPIO(GPIO const &copy) = delete;
+  GPIO &operator=(GPIO &&move) = delete;
+  GPIO &operator=(GPIO const &copy) = delete;
+
   void initialize();
 
   void setMode(int pin, uint32_t mode, uint32_t alternate = 0);
 
-  void set(int pin);
-  void clear(int pin);
-  void toggle(int pin);
-  bool get(int pin);
+  void set(int pin) { gpio_->BSRR = (1UL << pin); }
+  void clear(int pin) { gpio_->BSRR = (1UL << (pin + 16)); }
+  void toggle(int pin) { gpio_->ODR ^= (1UL << pin); }
+  bool get(int pin) { return (gpio_->IDR & (1UL << pin)) != 0; }
 };
 
 extern GPIO GPIO_A;
