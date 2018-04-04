@@ -1,7 +1,6 @@
 #pragma once
 
 #define FIELD_GET(reg, field) ((reg & field) >> (field##_Pos))
-#define FIELD_IS_SET(reg, field) ((reg & field) != 0)
 #define FIELD_SET(reg, field, value)                                           \
   do {                                                                         \
     reg &= ~(field);                                                           \
@@ -10,6 +9,7 @@
 
 #define BIT_SET(reg, bit) (reg |= bit)
 #define BIT_CLEAR(reg, bit) (reg &= ~bit)
+#define BIT_IS_SET(reg, field) ((reg & field) != 0)
 
 #define WAIT_UNTIL(condition)                                                  \
   do {                                                                         \
