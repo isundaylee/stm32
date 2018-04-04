@@ -94,7 +94,7 @@ $(DIR_BUILD)/$(APP).bin: $(DIR_BUILD)/$(APP).elf
 
 flash: size $(DIR_BUILD)/$(APP).bin
 	# st-flash --reset write $(DIR_BUILD)/$(APP).bin 0x08000000
-	$(JLINK) -device STM32F446RE -if JTAG -speed 400 -jtagconf -1,-1 -autoconnect 1 -CommanderScript $(DIR_SRC)/Flash.jlink
+	$(JLINK) -device STM32F446RE -if JTAG -speed 4000 -jtagconf -1,-1 -autoconnect 1 -CommanderScript $(DIR_SRC)/Flash.jlink
 
 gdb: $(DIR_BUILD)/$(APP).elf
 	$(GDB) $(DIR_BUILD)/$(APP).elf

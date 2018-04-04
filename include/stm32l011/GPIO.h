@@ -1,3 +1,5 @@
+#pragma once
+
 #include <DeviceHeader.h>
 
 const uint32_t GPIO_MODE_INPUT = 0b00;
