@@ -17,7 +17,8 @@ SIZE 		= $(GCC_PREFIX)-size
 ################################################################################
 
 APP             = Sandbox
-DEVICE          = stm32l011
+DEVICE          = stm32f446
+DEVICE_INC_NAME = STM32F4xx
 
 DIR_BUILD       = build
 DIR_SRC         = src
@@ -50,7 +51,7 @@ CC_FLAGS 	+= -Werror
 CC_FLAGS 	+= -I./include
 CC_FLAGS 	+= -I./include/$(DEVICE)
 CC_FLAGS 	+= -isystem ./lib/CMSIS/Include
-CC_FLAGS 	+= -isystem ./lib/CMSIS/Device/ST/STM32L0xx/Include
+CC_FLAGS 	+= -isystem ./lib/CMSIS/Device/ST/$(DEVICE_INC_NAME)/Include
 
 OBJS		= $(DIR_BUILD)/$(APP).o $(DIR_BUILD)/Startup.o
 DEVICE_OBJS	= $(patsubst $(DIR_SRC)/$(DEVICE)/%.cpp, $(DIR_BUILD)/%.o, $(wildcard $(DIR_DEVICE_SRC)/*.cpp))
