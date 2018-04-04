@@ -10,7 +10,7 @@ extern "C" void main() {
 
   // Setting up PLL frequency
   Flash::setLatency(6);
-  Clock::configurePLL(8, 150);
+  Clock::configurePLL(8, 50);
   Clock::switchSysclk(CLOCK_SYSCLK_PLL);
 
   GPIO_B.initialize();

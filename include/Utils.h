@@ -2,3 +2,16 @@
 
 #define FIELD_GET(reg, field) ((reg & field) >> (field##_Pos))
 #define FIELD_IS_SET(reg, field) ((reg & field) != 0)
+#define FIELD_SET(reg, field, value)                                           \
+  do {                                                                         \
+    reg &= ~(field);                                                           \
+    reg |= (value) << (field##_Pos);                                           \
+  } while (0)
+
+#define BIT_SET(reg, bit) (reg |= bit)
+#define BIT_CLEAR(reg, bit) (reg &= ~bit)
+
+#define WAIT_UNTIL(condition)                                                  \
+  do {                                                                         \
+    asm volatile("nop");                                                       \
+  } while (!(condition))

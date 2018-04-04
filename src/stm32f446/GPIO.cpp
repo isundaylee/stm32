@@ -16,23 +16,13 @@ void GPIO::initialize() {
 
   initialized_ = true;
 
-  if (gpio_ == GPIOA) {
-    RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
-  } else if (gpio_ == GPIOB) {
-    RCC->AHB1ENR |= RCC_AHB1ENR_GPIOBEN;
-  } else if (gpio_ == GPIOC) {
-    RCC->AHB1ENR |= RCC_AHB1ENR_GPIOCEN;
-  } else if (gpio_ == GPIOD) {
-    RCC->AHB1ENR |= RCC_AHB1ENR_GPIODEN;
-  } else if (gpio_ == GPIOE) {
-    RCC->AHB1ENR |= RCC_AHB1ENR_GPIOEEN;
-  } else if (gpio_ == GPIOF) {
-    RCC->AHB1ENR |= RCC_AHB1ENR_GPIOFEN;
-  } else if (gpio_ == GPIOG) {
-    RCC->AHB1ENR |= RCC_AHB1ENR_GPIOGEN;
-  } else if (gpio_ == GPIOH) {
-    RCC->AHB1ENR |= RCC_AHB1ENR_GPIOHEN;
-  }
+  size_t unitOffset =
+      reinterpret_cast<uintptr_t>(GPIOB) - reinterpret_cast<uintptr_t>(GPIOA);
+  size_t offset =
+      reinterpret_cast<uintptr_t>(gpio_) - reinterpret_cast<uintptr_t>(GPIOA);
+  int index = offset / unitOffset;
+
+  BIT_SET(RCC->AHB1ENR, RCC_AHB1ENR_GPIOAEN << index);
 }
 
 void GPIO::setMode(int pin, uint32_t mode, uint32_t alternate /* = 0 */) {
