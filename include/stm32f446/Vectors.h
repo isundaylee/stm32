@@ -1,3 +1,8 @@
+extern "C" void isrUSART1();
+extern "C" void isrUSART2();
+extern "C" void isrUSART3();
+extern "C" void isrUSART6();
+
 __attribute__ ((section (".isr_vectors")))
 __attribute__ ((used))
 static void (*_isrVectors[])() = {
@@ -54,6 +59,9 @@ static void (*_isrVectors[])() = {
     &_spin,
     &_spin,
     &_spin,
+    &isrUSART1,
+    &isrUSART2,
+    &isrUSART3,
     &_spin,
     &_spin,
     &_spin,
@@ -85,10 +93,7 @@ static void (*_isrVectors[])() = {
     &_spin,
     &_spin,
     &_spin,
-    &_spin,
-    &_spin,
-    &_spin,
-    &_spin,
+    &isrUSART6,
     &_spin,
     &_spin,
     &_spin,

@@ -22,6 +22,10 @@ extern "C" void main() {
   USART_1.enable();
 
   while (true) {
-    USART_1.write("Hello, world!");
+    int data = USART_1.read();
+
+    if (data != -1) {
+      USART_1.write(data);
+    }
   }
 }
