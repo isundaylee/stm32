@@ -88,9 +88,13 @@ $(DIR_BUILD)/$(APP).dump: $(DIR_BUILD)/$(APP).elf
 $(DIR_BUILD)/$(APP).bin: $(DIR_BUILD)/$(APP).elf
 	$(OBJCOPY) $< $@ -O binary
 
+.DEFAULT_GOAL := $(DIR_BUILD)/$(APP).bin
+
 ################################################################################
 # Utility functions
 ################################################################################
+
+.PHONY: flash gdb clean size
 
 flash: size $(DIR_BUILD)/$(APP).bin
 	# st-flash --reset write $(DIR_BUILD)/$(APP).bin 0x08000000
