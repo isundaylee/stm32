@@ -1,9 +1,13 @@
 #include <USART.h>
 
 #define DEFINE_USART_ISR(n)                                                    \
-  extern "C" void isrUSART##n() {                                                \
-    while (BIT_IS_SET(USART_##n.usart_->SR, USART_SR_RXNE)) {                    \
-      USART_##n.buffer_.push(static_cast<uint8_t>(USART_##n.usart_->DR));          \
+  extern "C" void isrUSART##n() {                                              \
+    while (BIT_IS_SET(USART_##n.usart_->SR, USART_SR_RXNE)) {                  \
+      USART_##n.buffer_.push(static_cast<uint8_t>(USART_##n.usart_->DR));      \
+    }                                                                          \
+                                                                               \
+    if (BIT_IS_SET(USART_##n.usart_->SR, USART_SR_ORE)) {                      \
+      (void)USART_##n.usart_->DR;                                              \
     }                                                                          \
   }
 
@@ -83,6 +87,8 @@ int USART::read() {
 
   return -1;
 }
+
+void USART::flush() { buffer_.clear(); }
 
 USART USART_1(USART1);
 USART USART_2(USART2);

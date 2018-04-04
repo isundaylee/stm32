@@ -27,6 +27,8 @@ public:
 
   int read();
 
+  void flush();
+
   friend void isrUSART1();
   friend void isrUSART2();
   friend void isrUSART3();
