@@ -1,0 +1,4 @@
+loadbin /Users/jiahao/Programming/Git/stm32/build/Sandbox.bin 0x08000000
+r
+g
+exit

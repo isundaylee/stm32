@@ -11,6 +11,7 @@ OBJCOPY 	= $(GCC_PREFIX)-objcopy
 DUMP 		= $(GCC_PREFIX)-objdump -d
 GDB 		= $(GCC_PREFIX)-gdb
 SIZE 		= $(GCC_PREFIX)-size
+JLINK 		= /Applications/SEGGER/JLink/JLinkExe
 
 ################################################################################
 # Directory setup
@@ -19,6 +20,7 @@ SIZE 		= $(GCC_PREFIX)-size
 APP             = Sandbox
 DEVICE          = stm32f446
 DEVICE_INC_NAME = STM32F4xx
+CPU_TYPE	= cortex-m4
 
 DIR_BUILD       = build
 DIR_SRC         = src
@@ -32,8 +34,9 @@ DIR_DEVICE_SRC  = $(DIR_SRC)/$(DEVICE)
 ################################################################################
 
 CC_FLAGS 	= -target arm-none-eabi
-CC_FLAGS	+= -mcpu=cortex-m0
+# CC_FLAGS	+= -march=armv7-m
 CC_FLAGS	+= -mthumb
+CC_FLAGS	+= -mcpu=$(CPU_TYPE)
 CC_FLAGS	+= -mfloat-abi=soft
 
 CC_FLAGS	+= -g
@@ -90,7 +93,8 @@ $(DIR_BUILD)/$(APP).bin: $(DIR_BUILD)/$(APP).elf
 ################################################################################
 
 flash: size $(DIR_BUILD)/$(APP).bin
-	st-flash --reset write $(DIR_BUILD)/$(APP).bin 0x08000000
+	# st-flash --reset write $(DIR_BUILD)/$(APP).bin 0x08000000
+	$(JLINK) -device STM32F446RE -if JTAG -speed 400 -jtagconf -1,-1 -autoconnect 1 -CommanderScript $(DIR_SRC)/Flash.jlink
 
 gdb: $(DIR_BUILD)/$(APP).elf
 	$(GDB) $(DIR_BUILD)/$(APP).elf
