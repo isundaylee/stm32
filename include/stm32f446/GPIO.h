@@ -9,7 +9,6 @@ const uint32_t GPIO_MODE_ANALOG = 0b11;
 
 class GPIO {
 private:
-  bool initialized_ = false;
   GPIO_TypeDef *gpio_;
 
 public:
@@ -20,7 +19,7 @@ public:
   GPIO &operator=(GPIO &&move) = delete;
   GPIO &operator=(GPIO const &copy) = delete;
 
-  void initialize();
+  void enable();
 
   void setMode(int pin, uint32_t mode, uint32_t alternate = 0);
 

@@ -4,13 +4,7 @@ GPIO GPIO_A(GPIOA);
 GPIO GPIO_B(GPIOB);
 GPIO GPIO_C(GPIOC);
 
-void GPIO::initialize() {
-  if (initialized_) {
-    return;
-  }
-
-  initialized_ = true;
-
+void GPIO::enable() {
   if (gpio_ == GPIOA) {
     RCC->IOPENR |= RCC_IOPENR_IOPAEN;
   } else if (gpio_ == GPIOB) {

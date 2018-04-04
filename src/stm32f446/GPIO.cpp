@@ -9,13 +9,7 @@ GPIO GPIO_F(GPIOF);
 GPIO GPIO_G(GPIOG);
 GPIO GPIO_H(GPIOH);
 
-void GPIO::initialize() {
-  if (initialized_) {
-    return;
-  }
-
-  initialized_ = true;
-
+void GPIO::enable() {
   size_t unitOffset =
       reinterpret_cast<uintptr_t>(GPIOB) - reinterpret_cast<uintptr_t>(GPIOA);
   size_t offset =
