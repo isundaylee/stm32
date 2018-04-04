@@ -10,7 +10,7 @@ extern "C" void _spin() {
   }
 }
 
-#include "Vectors.h"
+#include "Vectors.inl"
 
 extern uint32_t __attribute__((may_alias)) __bss_start__;
 extern uint32_t __attribute__((may_alias)) __bss_end__;
