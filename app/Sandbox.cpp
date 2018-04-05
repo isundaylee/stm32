@@ -8,37 +8,21 @@
 void test() {
   USART_1.write("Hello, world!\n");
 
-  static uint16_t data = 0;
+  uint32_t from[] = {0x11111111, 0x22222222, 0x33333333, 0x44444444};
+  uint32_t to[] = {0x00, 0x00, 0x00, 0x00};
 
   DMA_2.enable();
-
-  BIT_SET(DMA2_Stream0->CR, DMA_SxCR_EN);
-
-  USART_1.write("S0NDTR = ");
-  USART_1.write(HexString(DMA2_Stream0->NDTR));
-  USART_1.write("\n");
-
-  DMA_2.enable();
-  DMA_2.configureStream(0, 0, DMA_DIR_PERI_TO_MEM, 0xFFFF, true,
-                        DMA_PRIORITY_VERY_HIGH, &ADC1->DR, DMA_SIZE_16_BIT,
-                        false, &data, DMA_SIZE_16_BIT, false);
+  DMA_2.configureStream(0, 0, DMA_DIR_MEM_TO_MEM, 4, DMA_FIFO_THRES_FULL, false,
+                        DMA_PRIORITY_VERY_HIGH, from, DMA_SIZE_32_BIT, true,
+                        to, DMA_SIZE_32_BIT, true);
   DMA_2.enableStream(0);
 
-  ADC_1.selectChannel(10);
-  ADC_1.enableDMA();
-  ADC_1.startContinuousConversion();
-
-  while (true) {
-    USART_1.write("DATA = ");
-    USART_1.write(HexString(data));
+  for (size_t i = 0; i < sizeof(to) / sizeof(to[0]); i++) {
+    USART_1.write("to[");
+    USART_1.write(static_cast<uint8_t>('0' + i));
+    USART_1.write("] = ");
+    USART_1.write(HexString(to[i]));
     USART_1.write("\n");
-
-    int command = USART_1.read();
-    if (command == '1') {
-      ADC_1.startContinuousConversion();
-    } else if (command == '0') {
-      ADC_1.stopContinuousConversion();
-    }
   }
 }
 
@@ -62,7 +46,6 @@ extern "C" void main() {
   GPIO_C.setMode(0, GPIO_MODE_ANALOG);
 
   USART_1.enable();
-  ADC_1.enable();
 
   test();
 

@@ -23,37 +23,62 @@ DMA_Stream_TypeDef *DMA::getStream(int streamNumber) {
 }
 
 void DMA::configureStream(int streamNumber, uint32_t channel, uint32_t dir,
-                          uint32_t n, bool circular, uint32_t priority,
-                          volatile void *peri, uint32_t periSize, bool periInc,
-                          volatile void *mem, uint32_t memSize, bool memInc) {
+                          uint32_t n, uint32_t fifoThres, bool circular,
+                          uint32_t priority, volatile void *src,
+                          uint32_t srcSize, bool srcInc, volatile void *dst,
+                          uint32_t dstSize, bool dstInc) {
   DMA_Stream_TypeDef *stream = getStream(streamNumber);
 
   stream->CR = 0;
+  stream->FCR = 0x21;
+
+  stream->NDTR = n;
 
   FIELD_SET(stream->CR, DMA_SxCR_DIR, dir);
   FIELD_SET(stream->CR, DMA_SxCR_CHSEL, channel);
   FIELD_SET(stream->CR, DMA_SxCR_PL, priority);
-  FIELD_SET(stream->CR, DMA_SxCR_PSIZE, periSize);
-  FIELD_SET(stream->CR, DMA_SxCR_MSIZE, memSize);
+
+  if (fifoThres != DMA_FIFO_THRES_DIRECT) {
+    FIELD_SET(stream->FCR, DMA_SxFCR_FTH, fifoThres);
+    BIT_SET(stream->FCR, DMA_SxFCR_DMDIS);
+  }
 
   if (circular) {
     BIT_SET(stream->CR, DMA_SxCR_CIRC);
   }
 
-  if (periInc) {
-    BIT_SET(stream->CR, DMA_SxCR_PINC);
-  }
+  if (dir == DMA_DIR_PERI_TO_MEM | dir == DMA_DIR_MEM_TO_MEM) {
+    stream->M0AR = reinterpret_cast<uintptr_t>(dst);
+    stream->PAR = reinterpret_cast<uintptr_t>(src);
 
-  if (memInc) {
-    BIT_SET(stream->CR, DMA_SxCR_MINC);
-  }
+    FIELD_SET(stream->CR, DMA_SxCR_PSIZE, srcSize);
+    FIELD_SET(stream->CR, DMA_SxCR_MSIZE, dstSize);
 
-  stream->NDTR = n;
-  stream->M0AR = reinterpret_cast<uintptr_t>(mem);
-  stream->PAR = reinterpret_cast<uintptr_t>(peri);
+    if (srcInc) {
+      BIT_SET(stream->CR, DMA_SxCR_PINC);
+    }
+
+    if (dstInc) {
+      BIT_SET(stream->CR, DMA_SxCR_MINC);
+    }
+  } else {
+    stream->M0AR = reinterpret_cast<uintptr_t>(src);
+    stream->PAR = reinterpret_cast<uintptr_t>(dst);
+
+    FIELD_SET(stream->CR, DMA_SxCR_PSIZE, dstSize);
+    FIELD_SET(stream->CR, DMA_SxCR_MSIZE, srcSize);
+
+    if (dstInc) {
+      BIT_SET(stream->CR, DMA_SxCR_PINC);
+    }
+
+    if (srcInc) {
+      BIT_SET(stream->CR, DMA_SxCR_MINC);
+    }
+  }
 }
 
-void DMA::enableStream(int streamNumber){
+void DMA::enableStream(int streamNumber) {
   DMA_Stream_TypeDef *stream = getStream(streamNumber);
 
   BIT_SET(stream->CR, DMA_SxCR_EN);
