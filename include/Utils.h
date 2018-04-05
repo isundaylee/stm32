@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdint.h>
+
 #define FIELD_GET(reg, field) ((reg & field) >> (field##_Pos))
 #define FIELD_SET(reg, field, value)                                           \
   do {                                                                         \
@@ -15,3 +17,5 @@
   do {                                                                         \
     asm volatile("nop");                                                       \
   } while (!(condition))
+
+const char *HexString(uint32_t n);

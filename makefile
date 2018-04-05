@@ -56,7 +56,7 @@ CC_FLAGS 	+= -I./include/$(DEVICE)
 CC_FLAGS 	+= -isystem ./lib/CMSIS/Include
 CC_FLAGS 	+= -isystem ./lib/CMSIS/Device/ST/$(DEVICE_INC_NAME)/Include
 
-OBJS		= $(DIR_BUILD)/$(APP).o $(DIR_BUILD)/Startup.o
+OBJS		= $(DIR_BUILD)/$(APP).o $(DIR_BUILD)/Startup.o $(DIR_BUILD)/Utils.o
 DEVICE_OBJS	= $(patsubst $(DIR_SRC)/$(DEVICE)/%.cpp, $(DIR_BUILD)/%.o, $(wildcard $(DIR_DEVICE_SRC)/*.cpp))
 HEADERS		= $(wildcard $(DIR_INC)/*.h)
 
@@ -70,6 +70,9 @@ $(DIR_BUILD)/$(APP).o: $(DIR_APP)/$(APP).cpp
 	$(CC) -c $(CC_FLAGS) $< -o $@
 
 $(DIR_BUILD)/Startup.o: $(DIR_SRC)/Startup.cpp
+	$(CC) -c $(CC_FLAGS) $< -o $@
+
+$(DIR_BUILD)/Utils.o: $(DIR_SRC)/Utils.cpp
 	$(CC) -c $(CC_FLAGS) $< -o $@
 
 $(DIR_BUILD)/%.o: $(DIR_DEVICE_SRC)/%.cpp $(HEADERS)
