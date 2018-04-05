@@ -78,6 +78,10 @@ void USART::write(uint8_t *data, size_t length) {
   }
 }
 
+void USART::enableTxDMA() { BIT_SET(usart_->CR3, USART_CR3_DMAT); }
+
+void USART::disableTxDMA() { BIT_CLEAR(usart_->CR3, USART_CR3_DMAT); }
+
 int USART::read() {
   uint8_t data;
 

@@ -25,6 +25,9 @@ public:
   void write(const char *data);
   void write(uint8_t *data, size_t length);
 
+  void enableTxDMA();
+  void disableTxDMA();
+
   int read();
 
   void flush();

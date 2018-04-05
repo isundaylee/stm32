@@ -3,6 +3,7 @@
 #include <DeviceHeader.h>
 
 const uint32_t DMA_DIR_PERI_TO_MEM = 0b00;
+const uint32_t DMA_DIR_MEM_TO_PERI = 0b01;
 const uint32_t DMA_DIR_MEM_TO_MEM = 0b10;
 
 const uint32_t DMA_PRIORITY_LOW = 0b00;
