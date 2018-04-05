@@ -23,6 +23,9 @@ public:
   void startContinuousConversion();
   void stopContinuousConversion();
   uint16_t getContinuousConversion() { return adc_->DR; }
+
+  void enableDMA();
+  void disableDMA();
 };
 
 extern ADC ADC_1;

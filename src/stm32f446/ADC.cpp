@@ -24,19 +24,34 @@ void ADC::selectChannel(int channel) { adc_->SQR3 = channel; }
 void ADC::startContinuousConversion() {
   BIT_CLEAR(adc_->CR2, ADC_CR2_SWSTART);
   BIT_SET(adc_->CR2, ADC_CR2_CONT);
-  BIT_CLEAR(adc_->CR2, ADC_CR2_DMA);
   BIT_CLEAR(adc_->CR2, ADC_CR2_EOCS);
 
   // Force a read on DR so that EOC is cleared
   FORCE_READ(adc_->DR);
 
   BIT_SET(adc_->CR2, ADC_CR2_SWSTART);
-  WAIT_UNTIL(BIT_IS_SET(adc_->SR, ADC_SR_EOC));
+
+  if (!BIT_IS_SET(adc_->CR2, ADC_CR2_DMA)) {
+    WAIT_UNTIL(BIT_IS_SET(adc_->SR, ADC_SR_EOC));
+  }
 }
 
 void ADC::stopContinuousConversion() {
   BIT_CLEAR(adc_->CR2, ADC_CR2_CONT);
-  WAIT_UNTIL(BIT_IS_SET(adc_->SR, ADC_SR_EOC));
+
+  if (!BIT_IS_SET(adc_->CR2, ADC_CR2_DMA)) {
+    WAIT_UNTIL(BIT_IS_SET(adc_->SR, ADC_SR_EOC));
+  }
+}
+
+void ADC::enableDMA() {
+  BIT_SET(adc_->CR2, ADC_CR2_DMA);
+  BIT_SET(ADC1->CR2, ADC_CR2_DDS);
+}
+
+void ADC::disableDMA() {
+  BIT_CLEAR(adc_->CR2, ADC_CR2_DMA);
+  BIT_CLEAR(ADC1->CR2, ADC_CR2_DDS);
 }
 
 ADC ADC_1(ADC1);
