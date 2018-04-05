@@ -5,13 +5,19 @@ const char *HexString(uint32_t n) {
 
   buffer[9] = '\0';
   char *p = buffer + 8;
-  for (; n != 0; n /= 16, p--) {
-    if (n % 16 < 10) {
-      *p = '0' + (n % 16);
-    } else {
-      *p = 'A' + ((n % 16) - 10);
+
+  if (n != 0) {
+    for (; n != 0; n /= 16, p--) {
+      if (n % 16 < 10) {
+        *p = '0' + (n % 16);
+      } else {
+        *p = 'A' + ((n % 16) - 10);
+      }
     }
+  } else {
+    *(p--) = '0';
   }
+  
   *(p--) = 'x';
   *(p--) = '0';
 
