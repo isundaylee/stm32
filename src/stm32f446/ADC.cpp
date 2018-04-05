@@ -27,7 +27,11 @@ void ADC::startContinuousConversion() {
   BIT_CLEAR(adc_->CR2, ADC_CR2_DMA);
   BIT_CLEAR(adc_->CR2, ADC_CR2_EOCS);
 
+  // Force a read on DR so that EOC is cleared
+  FORCE_READ(adc_->DR);
+
   BIT_SET(adc_->CR2, ADC_CR2_SWSTART);
+  WAIT_UNTIL(BIT_IS_SET(adc_->SR, ADC_SR_EOC));
 }
 
 void ADC::stopContinuousConversion() {

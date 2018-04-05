@@ -18,4 +18,6 @@
     asm volatile("nop");                                                       \
   } while (!(condition))
 
+#define FORCE_READ(reg) ((void) reg)
+
 const char *HexString(uint32_t n);

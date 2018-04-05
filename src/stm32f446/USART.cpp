@@ -7,7 +7,7 @@
     }                                                                          \
                                                                                \
     if (BIT_IS_SET(USART_##n.usart_->SR, USART_SR_ORE)) {                      \
-      (void)USART_##n.usart_->DR;                                              \
+      FORCE_READ(USART_##n.usart_->DR);                                        \
     }                                                                          \
   }
 
