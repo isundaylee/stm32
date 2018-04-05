@@ -21,3 +21,4 @@
 #define FORCE_READ(reg) ((void) reg)
 
 const char *HexString(uint32_t n);
+const char *DecString(uint32_t n);

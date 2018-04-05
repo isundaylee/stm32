@@ -21,7 +21,7 @@ void test() {
     USART_1.write("to[");
     USART_1.write(static_cast<uint8_t>('0' + i));
     USART_1.write("] = ");
-    USART_1.write(HexString(to[i]));
+    USART_1.write(DecString(to[i]));
     USART_1.write("\n");
   }
 }
