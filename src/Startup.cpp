@@ -4,7 +4,31 @@ extern "C" void _startup(void);
 
 extern "C" void _reset() { _startup(); }
 
+extern "C" void _hardFault() {
+  while (true) {
+    asm volatile("nop");
+  }
+}
+
 extern "C" void _spin() {
+  while (true) {
+    asm volatile("nop");
+  }
+}
+
+extern "C" void _spin2() {
+  while (true) {
+    asm volatile("nop");
+  }
+}
+
+extern "C" void _spin3() {
+  while (true) {
+    asm volatile("nop");
+  }
+}
+
+extern "C" void _spin4() {
   while (true) {
     asm volatile("nop");
   }
