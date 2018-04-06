@@ -67,7 +67,7 @@ void generateWave() {
   GPIO_B.clear(12);
 }
 
-uint16_t freqs[8] = {0, 262, 294, 330, 349, 392, 440, 494};
+uint16_t freqs[11] = {0, 262, 294, 330, 349, 392, 440, 494, 524, 588, 660};
 
 extern "C" void main() {
   configureClock();
@@ -88,9 +88,11 @@ extern "C" void main() {
   while (true) {
     int data = USART_1.read();
 
-    if (data >= '1' && data <= '7') {
+    if (data >= '1' && data <= '9') {
       Timer_5.setOverflow(Timer_5.getPeripheralFrequency() / 16 /
                           freqs[data - '1' + 1]);
+    } else if (data == '0') {
+      Timer_5.setOverflow(Timer_5.getPeripheralFrequency() / 16 / freqs[10]);
     }
   }
 
