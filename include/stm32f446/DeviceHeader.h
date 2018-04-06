@@ -6,3 +6,4 @@
 #include "stm32f4xx.h"
 
 #undef ADC
+#undef DAC
