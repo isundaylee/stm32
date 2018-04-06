@@ -34,3 +34,15 @@
     FIELD_SET(RCC->CFGR, RCC_CFGR_MCO1PRE, 4 + (prescalar - 2));
   }
 }
+
+/* static */ void Clock::configureAHBPrescaler(uint32_t prescaler) {
+  FIELD_SET(RCC->CFGR, RCC_CFGR_HPRE, prescaler);
+}
+
+/* static */ void Clock::configureAPB1Prescaler(uint32_t prescaler) {
+  FIELD_SET(RCC->CFGR, RCC_CFGR_PPRE1, prescaler);
+}
+
+/* static */ void Clock::configureAPB2Prescaler(uint32_t prescaler) {
+  FIELD_SET(RCC->CFGR, RCC_CFGR_PPRE2, prescaler);
+}
