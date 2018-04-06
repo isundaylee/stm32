@@ -29,13 +29,24 @@ const uint32_t CLOCK_APB_PRESCALER_8 = 0b110;
 const uint32_t CLOCK_APB_PRESCALER_16 = 0b111;
 
 class Clock {
+private:
+  static void updateSysclkFrequency();
+
 public:
-  uint32_t systemClockFrequency = 16000000;
+  static uint32_t sysclkFrequency;
 
   static void switchSysclk(uint32_t systemClock);
+
   static void configurePLL(uint32_t pllM, uint32_t pllN);
   static void configureMCO1(uint32_t source, uint32_t prescalar);
   static void configureAHBPrescaler(uint32_t prescaler);
   static void configureAPB1Prescaler(uint32_t prescaler);
   static void configureAPB2Prescaler(uint32_t prescaler);
+
+  static uint32_t getPLLCLKFrequency();
+  static uint32_t getAHBFrequency();
+  static uint32_t getAPB1Frequency();
+  static uint32_t getAPB1TimerFrequency();
+  static uint32_t getAPB2Frequency();
+  static uint32_t getAPB2TimerFrequency();
 };

@@ -1,3 +1,4 @@
+#include <Clock.h>
 #include <USART.h>
 
 #define DEFINE_USART_ISR(n)                                                    \
@@ -18,16 +19,22 @@ DEFINE_USART_ISR(6);
 
 #undef DEFINE_USART_ISR
 
-void USART::enable() {
+void USART::enable(uint32_t baudRate) {
+  uint32_t peripheralFrequency = 0;
+
   // Enable USART clock
   if (usart_ == USART1) {
     BIT_SET(RCC->APB2ENR, RCC_APB2ENR_USART1EN);
+    peripheralFrequency = Clock::getAPB2Frequency();
   } else if (usart_ == USART2) {
     BIT_SET(RCC->APB1ENR, RCC_APB1ENR_USART2EN);
+    peripheralFrequency = Clock::getAPB1Frequency();
   } else if (usart_ == USART3) {
     BIT_SET(RCC->APB1ENR, RCC_APB1ENR_USART3EN);
+    peripheralFrequency = Clock::getAPB1Frequency();
   } else if (usart_ == USART6) {
     BIT_SET(RCC->APB2ENR, RCC_APB2ENR_USART6EN);
+    peripheralFrequency = Clock::getAPB2Frequency();
   }
 
   // Enable USART
@@ -40,7 +47,7 @@ void USART::enable() {
   FIELD_SET(usart_->CR2, USART_CR2_STOP, 0b00);
 
   // Set baud rate to 115200
-  usart_->BRR = 781;
+  usart_->BRR = peripheralFrequency / baudRate;
 
   // Enable transmission and receiving
   BIT_SET(usart_->CR1, USART_CR1_TE);

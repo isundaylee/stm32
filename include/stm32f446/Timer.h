@@ -19,6 +19,8 @@ private:
 public:
   Timer(TIM_TypeDef *timer) : timer_(timer) {}
 
+  uint32_t getPeripheralFrequency();
+
   void enable(uint32_t prescaler, uint32_t overflow, void (*handler)());
   void disable();
 

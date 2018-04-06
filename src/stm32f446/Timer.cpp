@@ -1,6 +1,5 @@
+#include <Clock.h>
 #include <Timer.h>
-
-#include "GPIO.h"
 
 #define DEFINE_TIMER_ISR(n)                                                    \
   extern "C" void isrTimer##n() {                                              \
@@ -41,6 +40,14 @@ IRQn_Type Timer::irqN() {
   }
 
   return TIM2_IRQn;
+}
+
+uint32_t Timer::getPeripheralFrequency() {
+  if (timer_ == TIM2 || timer_ == TIM3 || timer_ == TIM4 || timer_ == TIM5) {
+    return Clock::getAPB1TimerFrequency();
+  }
+
+  return 0;
 }
 
 void Timer::enable(uint32_t prescaler, uint32_t overflow, void (*handler)()) {

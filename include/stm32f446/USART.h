@@ -19,7 +19,7 @@ private:
 public:
   USART(USART_TypeDef *usart) : usart_(usart) {}
 
-  void enable();
+  void enable(uint32_t baudRate);
 
   void write(uint8_t data);
   void write(const char *data);
