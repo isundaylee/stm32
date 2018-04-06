@@ -15,24 +15,21 @@ DEFINE_TIMER_ISR(3);
 DEFINE_TIMER_ISR(4);
 DEFINE_TIMER_ISR(5);
 
-void Timer::enable(uint32_t prescaler, uint32_t overflow, void (*handler)()) {
-  handler_ = handler;
-
+uint32_t Timer::rccBit() {
   if (timer_ == TIM2) {
-    BIT_SET(RCC->APB1ENR, RCC_APB1ENR_TIM2EN);
+    return RCC_APB1ENR_TIM2EN;
   } else if (timer_ == TIM3) {
-    BIT_SET(RCC->APB1ENR, RCC_APB1ENR_TIM3EN);
+    return RCC_APB1ENR_TIM3EN;
   } else if (timer_ == TIM4) {
-    BIT_SET(RCC->APB1ENR, RCC_APB1ENR_TIM4EN);
+    return RCC_APB1ENR_TIM4EN;
   } else if (timer_ == TIM5) {
-    BIT_SET(RCC->APB1ENR, RCC_APB1ENR_TIM5EN);
+    return RCC_APB1ENR_TIM5EN;
   }
 
-  BIT_SET(timer_->DIER, TIM_DIER_UIE);
+  return 0;
+}
 
-  timer_->ARR = overflow;
-  timer_->PSC = prescaler - 1;
-
+IRQn_Type Timer::irqN() {
   if (timer_ == TIM2) {
     NVIC_EnableIRQ(TIM2_IRQn);
   } else if (timer_ == TIM3) {
@@ -43,8 +40,31 @@ void Timer::enable(uint32_t prescaler, uint32_t overflow, void (*handler)()) {
     NVIC_EnableIRQ(TIM5_IRQn);
   }
 
+  return TIM2_IRQn;
+}
+
+void Timer::enable(uint32_t prescaler, uint32_t overflow, void (*handler)()) {
+  handler_ = handler;
+
+  BIT_SET(RCC->APB1ENR, rccBit());
+  BIT_SET(timer_->DIER, TIM_DIER_UIE);
+
+  timer_->ARR = overflow;
+  timer_->PSC = prescaler - 1;
+
+  NVIC_EnableIRQ(irqN());
+
+  BIT_SET(timer_->CR1, TIM_CR1_ARPE);
   BIT_SET(timer_->CR1, TIM_CR1_CEN);
 }
+
+void Timer::disable() {
+  NVIC_DisableIRQ(irqN());
+  BIT_CLEAR(timer_->CR1, TIM_CR1_CEN);
+  BIT_CLEAR(RCC->APB1ENR, rccBit());
+}
+
+void Timer::setOverflow(uint32_t overflow) { timer_->ARR = overflow; }
 
 Timer Timer_2(TIM2);
 Timer Timer_3(TIM3);

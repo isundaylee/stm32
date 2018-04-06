@@ -21,19 +21,17 @@ void configureClock() {
 }
 
 void generateWave() {
-  static uint16_t output = 0;
-  static int direction = 1;
+  static uint16_t timestep = 0;
+  static uint16_t pattern[16] = {2048, 2832, 3496, 3940, 4095, 3940,
+                                 3496, 2832, 2048, 1264, 600,  156,
+                                 0,    156,  600,  1264};
 
   GPIO_B.set(12);
-
-  output += direction;
-  if (output == 0xFFF || output == 0) {
-    direction = -direction;
-  }
-  DAC_1.setChannelValue(1, output);
-
+  DAC_1.setChannelValue(1, pattern[(timestep++) % 16]);
   GPIO_B.clear(12);
 }
+
+uint16_t freqs[8] = {0, 262, 294, 330, 349, 392, 440, 494};
 
 extern "C" void main() {
   configureClock();
@@ -50,7 +48,18 @@ extern "C" void main() {
   DAC_1.enable();
   DAC_1.enableChannel(1);
 
-  Timer_5.enable(1, 80, &generateWave);
+  USART_1.enable();
+  USART_1.write("Hello, world!\n");
+
+  Timer_5.enable(1, 90000000 / 16 / freqs[1], &generateWave);
+
+  while (true) {
+    int data = USART_1.read();
+
+    if (data >= '1' && data <= '7') {
+      Timer_5.setOverflow(90000000 / 16 / freqs[data - '1' + 1]);
+    }
+  }
 
   WAIT_UNTIL(false);
 }

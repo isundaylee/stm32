@@ -13,10 +13,16 @@ private:
 
   void (*handler_)();
 
+  uint32_t rccBit();
+  IRQn_Type irqN();
+
 public:
   Timer(TIM_TypeDef *timer) : timer_(timer) {}
 
   void enable(uint32_t prescaler, uint32_t overflow, void (*handler)());
+  void disable();
+
+  void setOverflow(uint32_t overflow);
 
   friend void isrTimer2();
   friend void isrTimer3();

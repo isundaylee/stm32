@@ -40,7 +40,7 @@ void USART::enable() {
   FIELD_SET(usart_->CR2, USART_CR2_STOP, 0b00);
 
   // Set baud rate to 115200
-  usart_->BRR = 139;
+  usart_->BRR = 781;
 
   // Enable transmission and receiving
   BIT_SET(usart_->CR1, USART_CR1_TE);
