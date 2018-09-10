@@ -18,9 +18,9 @@ JLINK 		= /Applications/SEGGER/JLink/JLinkExe
 ################################################################################
 
 APP             = Sandbox
-DEVICE          = stm32f446
-DEVICE_INC_NAME = STM32F4xx
-CPU_TYPE	= cortex-m4
+DEVICE          = stm32l011
+DEVICE_INC_NAME = STM32L0xx
+CPU_TYPE	= cortex-m0
 
 DIR_BUILD       = build
 DIR_SRC         = src
@@ -100,8 +100,8 @@ $(DIR_BUILD)/$(APP).bin: $(DIR_BUILD)/$(APP).elf
 .PHONY: flash gdb clean size
 
 flash: size $(DIR_BUILD)/$(APP).bin
-	# st-flash --reset write $(DIR_BUILD)/$(APP).bin 0x08000000
-	$(JLINK) -device STM32F446RE -if JTAG -speed 4000 -jtagconf -1,-1 -autoconnect 1 -CommanderScript $(DIR_SRC)/Flash.jlink
+	st-flash --reset write $(DIR_BUILD)/$(APP).bin 0x08000000
+	# $(JLINK) -device STM32F446RE -if JTAG -speed 4000 -jtagconf -1,-1 -autoconnect 1 -CommanderScript $(DIR_SRC)/Flash.jlink
 
 gdb: $(DIR_BUILD)/$(APP).elf
 	$(GDB) $(DIR_BUILD)/$(APP).elf

@@ -1,5 +1,7 @@
 #include <Utils.h>
 
+#if 0
+
 const char *HexString(uint32_t n) {
   static char buffer[11];
 
@@ -44,3 +46,5 @@ const char *DecString(uint32_t n) {
 
   return (p + 1);
 }
+
+#endif
