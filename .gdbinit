@@ -1,3 +1,3 @@
-target remote localhost:2331
+target extended-remote :4242
 file build/Sandbox.elf
 monitor reset

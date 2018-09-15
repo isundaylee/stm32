@@ -20,3 +20,8 @@ void GPIO::setMode(int pin, uint32_t mode, uint32_t alternate /* = 0 */) {
   gpio_->AFR[pin / 8] &= ~(0b1111 << (4 * (pin % 8)));
   gpio_->AFR[pin / 8] |= (alternate << (4 * (pin % 8)));
 }
+
+void GPIO::setOutputMode(int pin, uint32_t mode) {
+  gpio_->OTYPER &= ~(0b1 << pin);
+  gpio_->OTYPER |= (mode << pin);
+}

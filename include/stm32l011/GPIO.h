@@ -7,6 +7,9 @@ const uint32_t GPIO_MODE_OUTPUT = 0b01;
 const uint32_t GPIO_MODE_ALTERNATE = 0b10;
 const uint32_t GPIO_MODE_ANALOG = 0b11;
 
+const uint32_t GPIO_OUTPUT_MODE_PUSH_PULL = 0b0;
+const uint32_t GPIO_OUTPUT_MODE_OPEN_DRAIN = 0b1;
+
 class GPIO {
 private:
   GPIO_TypeDef *gpio_;
@@ -22,6 +25,7 @@ public:
   void enable();
 
   void setMode(int pin, uint32_t mode, uint32_t alternate = 0);
+  void setOutputMode(int pin, uint32_t mode);
 
   void set(int pin) { gpio_->BSRR = (1UL << pin); }
   void clear(int pin) { gpio_->BSRR = (1UL << (pin + 16)); }
