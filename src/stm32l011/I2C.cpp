@@ -59,6 +59,8 @@ void I2C::enable(I2C_SCL_Pin scl, I2C_SDA_Pin sda) {
 }
 
 bool I2C::write(uint8_t addr, size_t len, uint8_t *data) {
+  WAIT_UNTIL((i2c_->ISR & I2C_ISR_BUSY) == 0);
+  
   i2c_->CR2 = (len << I2C_CR2_NBYTES_Pos) | (addr << 1);
   i2c_->CR2 |= I2C_CR2_START;
 
