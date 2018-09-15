@@ -1,5 +1,6 @@
 #include "GPIO.h"
 #include "I2C.h"
+#include "Clock.h"
 
 void sendCommand(I2C& i2c, uint8_t cmd) {
   uint8_t data[] = {0x00, cmd};
@@ -17,12 +18,10 @@ void sendCommand(I2C& i2c, uint8_t cmd, uint8_t val1, uint8_t val2) {
 }
 
 extern "C" void main() {
-  RCC->CR |= RCC_CR_HSION;
-  WAIT_UNTIL((RCC->CR & RCC_CR_HSIRDY) != 0);
-  RCC->CFGR = (RCC->CFGR & ~RCC_CFGR_SW_Msk) | RCC_CFGR_SW_HSI;
+  Clock::enableHSI();
+  Clock::switchSysclk(Clock::Sysclk::HSI);
 
   GPIO_A.enable();
-
   GPIO_A.setMode(1, GPIO_MODE_OUTPUT, 1);
 
   I2C_1.enable(I2C_SCL_Pin::I2C1_PA4, I2C_SDA_Pin::I2C1_PA10);
