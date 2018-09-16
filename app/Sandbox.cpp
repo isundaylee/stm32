@@ -86,6 +86,8 @@ void rerender() {
 ////////////////////////////////////////////////////////////////////////////////
 
 void stop() {
+  return;
+  
   PWR->CR |= PWR_CR_CWUF;
   PWR->CR &= ~PWR_CR_PDDS;
 
@@ -139,6 +141,8 @@ void ensureOLEDOff() {
 ////////////////////////////////////////////////////////////////////////////////
 
 void wakeupTimerHandler() {
+  GPIO_A.toggle(9);
+
   switch (state) {
   case State::IDLE:
     break;
@@ -171,6 +175,7 @@ extern "C" void main() {
 
   GPIO_A.enable();
   GPIO_A.setMode(1, GPIO_MODE_OUTPUT);
+  GPIO_A.setMode(9, GPIO_MODE_OUTPUT);
 
   RealTimeClock::enable(RealTimeClock::RTCClock::LSI);
   RealTimeClock::setupWakeupTimer(1, RealTimeClock::WakeupTimerClock::CK_SPRE, wakeupTimerHandler);

@@ -11,16 +11,32 @@ extern "C" void isrRTC() {
 }
 
 /* static */ void RealTimeClock::enable(RTCClock clock) {
-  RCC->APB1ENR |= RCC_APB1ENR_PWREN;
-  PWR->CR |= PWR_CR_DBP;
+  BIT_SET(RCC->APB1ENR, RCC_APB1ENR_PWREN);
+  BIT_SET(PWR->CR, PWR_CR_DBP);
 
   switch (clock) {
   case RTCClock::LSI:
-    RCC->CSR |= (0b10 << RCC_CSR_RTCSEL_Pos);
+    FIELD_SET(RCC->CSR, RCC_CSR_RTCSEL, 0b10);
     break;
   }
 
-  RCC->CSR |= RCC_CSR_RTCEN;
+  BIT_SET(RCC->CSR, RCC_CSR_RTCEN);
+
+  disableWriteProtection();
+
+  BIT_SET(RTC->ISR, RTC_ISR_INIT);
+  WAIT_UNTIL(BIT_IS_SET(RTC->ISR, RTC_ISR_INITF));
+
+  switch (clock) {
+  case RTCClock::LSI:
+    FIELD_SET(RTC->PRER, RTC_PRER_PREDIV_A, 124);
+    FIELD_SET(RTC->PRER, RTC_PRER_PREDIV_S, 329);
+    break;
+  }
+
+  BIT_CLEAR(RTC->ISR, RTC_ISR_INIT);
+
+  enableWriteProtection();
 }
 
 /* static */ void RealTimeClock::disableWriteProtection() {
