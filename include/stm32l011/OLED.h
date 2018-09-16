@@ -72,6 +72,9 @@ public:
   }
 
   void setPixel(size_t r, size_t c) {
+    r = H - r - 1;
+    c = W - c - 1;
+
     buffer[r / 8][c] |= (1 << (r % 8));
   }
 
@@ -79,6 +82,16 @@ public:
     for (size_t r=top; r<=bottom; r++) {
       for (size_t c=left; c<=right; c++) {
         setPixel(r, c);
+      }
+    }
+  }
+
+  void sprite(size_t x, size_t y, size_t h, size_t w, const uint8_t *data) {
+    for (size_t r=0; r<h; r++) {
+      for (size_t c=0; c<w; c++) {
+        if ((data[(r / 8) * w + c] & (1 << (r % 8))) != 0) {
+          setPixel(x + r, y + c);
+        }
       }
     }
   }

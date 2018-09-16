@@ -4,7 +4,54 @@
 
 #include "OLED.h"
 
+#include "DigitBitmaps.h"
+
 OLED<0x3C, 64, 128> oled(I2C_1);
+
+size_t countdown = 130;
+
+uint8_t const* digitToSprite(int digit) {
+  switch (digit) {
+  case 0:
+    return BITMAP_CHAR_0;
+  case 1:
+    return BITMAP_CHAR_1;
+  case 2:
+    return BITMAP_CHAR_2;
+  case 3:
+    return BITMAP_CHAR_3;
+  case 4:
+    return BITMAP_CHAR_4;
+  case 5:
+    return BITMAP_CHAR_5;
+  case 6:
+    return BITMAP_CHAR_6;
+  case 7:
+    return BITMAP_CHAR_7;
+  case 8:
+    return BITMAP_CHAR_8;
+  case 9:
+    return BITMAP_CHAR_9;
+  }
+
+  return 0;
+}
+
+void updateCountdown() {
+  size_t minutes = countdown / 60;
+  size_t seconds = countdown % 60;
+
+  oled.clearScreen();
+  oled.sprite(12,  0, 40, 24, digitToSprite(minutes / 10));
+  oled.sprite(12, 26, 40, 24, digitToSprite(minutes % 10));
+  oled.sprite(12, 52, 40, 24, BITMAP_CHAR_COLON);
+  oled.sprite(12, 78, 40, 24, digitToSprite(seconds / 10));
+  oled.sprite(12, 104, 40, 24, digitToSprite(seconds % 10));
+
+  if (!oled.render()) {
+    GPIO_A.set(1);
+  }
+}
 
 extern "C" void main() {
   Clock::enableHSI();
@@ -20,13 +67,11 @@ extern "C" void main() {
   oled.disableEntireDisplay();
   oled.turnDisplayOn();
 
-  oled.clearScreen();
-  oled.rectangle(0, 15, 0, 15);
-
-  if (!oled.render()) {
-    GPIO_A.set(1);
-  }
-
   while (true) {
+    updateCountdown();
+    
+    if (countdown > 0) {
+      countdown --;
+    }
   }
 }

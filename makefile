@@ -56,6 +56,9 @@ CC_FLAGS 	+= -I./include/$(DEVICE)
 CC_FLAGS 	+= -isystem ./lib/CMSIS/Include
 CC_FLAGS 	+= -isystem ./lib/CMSIS/Device/ST/$(DEVICE_INC_NAME)/Include
 
+LD_FLAGS	= -L /usr/local/Cellar/arm-gcc-bin/7-2018-q2-update/lib/gcc/arm-none-eabi/7.3.1/thumb/v6-m/
+LD_FLAGS	+= -lgcc
+
 OBJS		= $(DIR_BUILD)/$(APP).o $(DIR_BUILD)/Startup.o $(DIR_BUILD)/Utils.o
 DEVICE_OBJS	= $(patsubst $(DIR_SRC)/$(DEVICE)/%.cpp, $(DIR_BUILD)/%.o, $(wildcard $(DIR_DEVICE_SRC)/*.cpp))
 HEADERS		= $(wildcard $(DIR_INC)/*.h)
