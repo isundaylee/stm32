@@ -4,10 +4,10 @@
 
 class ADC {
 private:
-  ADC_TypeDef *adc_;
+  ADC_TypeDef* adc_;
 
 public:
-  ADC(ADC_TypeDef *adc) : adc_(adc) {}
+  ADC(ADC_TypeDef* adc) : adc_(adc) {}
 
   void enable();
 

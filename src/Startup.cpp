@@ -46,7 +46,7 @@ extern "C" void main(void);
 
 extern "C" void _startup(void) {
   // Zero the BSS section
-  for (uint32_t *p = &__bss_start__; p != &__bss_end__; p++) {
+  for (uint32_t* p = &__bss_start__; p != &__bss_end__; p++) {
     *p = 0;
   }
 

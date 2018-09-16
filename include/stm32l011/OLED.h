@@ -2,8 +2,7 @@
 
 #include "I2C.h"
 
-template <uint8_t Addr, size_t H, size_t W>
-class OLED {
+template <uint8_t Addr, size_t H, size_t W> class OLED {
 private:
   I2C& i2c_;
   uint8_t buffer[H / 8][W];
@@ -64,8 +63,8 @@ public:
   //////////////////////////////////////////////////////////////////////////////
 
   void clearScreen() {
-    for (size_t r=0; r<H/8; r++) {
-      for (size_t c=0; c<W; c++) {
+    for (size_t r = 0; r < H / 8; r++) {
+      for (size_t c = 0; c < W; c++) {
         buffer[r][c] = 0x00;
       }
     }
@@ -79,16 +78,16 @@ public:
   }
 
   void rectangle(size_t left, size_t right, size_t top, size_t bottom) {
-    for (size_t r=top; r<=bottom; r++) {
-      for (size_t c=left; c<=right; c++) {
+    for (size_t r = top; r <= bottom; r++) {
+      for (size_t c = left; c <= right; c++) {
         setPixel(r, c);
       }
     }
   }
 
-  void sprite(size_t x, size_t y, size_t h, size_t w, const uint8_t *data) {
-    for (size_t r=0; r<h; r++) {
-      for (size_t c=0; c<w; c++) {
+  void sprite(size_t x, size_t y, size_t h, size_t w, const uint8_t* data) {
+    for (size_t r = 0; r < h; r++) {
+      for (size_t c = 0; c < w; c++) {
         if ((data[(r / 8) * w + c] & (1 << (r % 8))) != 0) {
           setPixel(x + r, y + c);
         }
@@ -109,12 +108,12 @@ public:
       return false;
     }
 
-    for (size_t r=0; r<H/8; r++) {
-      for (size_t c=0; c<W; c+=16) {
+    for (size_t r = 0; r < H / 8; r++) {
+      for (size_t c = 0; c < W; c += 16) {
         static uint8_t data[1 + 16];
 
         data[0] = 0x40;
-        for (size_t i=0; i<16; i++) {
+        for (size_t i = 0; i < 16; i++) {
           data[i + 1] = buffer[r][c + i];
         }
 

@@ -73,13 +73,13 @@ void USART::write(uint8_t data) {
   usart_->DR = data;
 }
 
-void USART::write(const char *data) {
+void USART::write(const char* data) {
   while (*data != '\0') {
     write(*(data++));
   }
 }
 
-void USART::write(uint8_t *data, size_t length) {
+void USART::write(uint8_t* data, size_t length) {
   for (size_t i = 0; i < length; i++) {
     write(data[i]);
   }

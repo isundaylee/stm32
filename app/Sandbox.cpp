@@ -1,6 +1,6 @@
+#include "Clock.h"
 #include "GPIO.h"
 #include "I2C.h"
-#include "Clock.h"
 #include "RealTimeClock.h"
 
 #include "OLED.h"
@@ -55,7 +55,7 @@ void renderCountdown(size_t countdown) {
   size_t seconds = countdown % 60;
 
   oled.clearScreen();
-  oled.sprite(12,  0, 40, 24, digitToSprite(minutes / 10));
+  oled.sprite(12, 0, 40, 24, digitToSprite(minutes / 10));
   oled.sprite(12, 26, 40, 24, digitToSprite(minutes % 10));
   oled.sprite(12, 52, 40, 24, BITMAP_CHAR_COLON);
   oled.sprite(12, 78, 40, 24, digitToSprite(seconds / 10));
@@ -87,15 +87,15 @@ void rerender() {
 
 void stop() {
   return;
-  
+
   PWR->CR |= PWR_CR_CWUF;
   PWR->CR &= ~PWR_CR_PDDS;
 
   RCC->CFGR |= RCC_CFGR_STOPWUCK;
   SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
 
-  asm ("dsb");
-  asm ("wfi");
+  asm("dsb");
+  asm("wfi");
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -109,8 +109,8 @@ void ensureOLEDOn() {
 
   GPIO_A.set(1);
 
-  for (int i=0; i<100000; i++)
-    asm volatile ("nop");
+  for (int i = 0; i < 100000; i++)
+    asm volatile("nop");
 
   I2C_1.enable(I2C_SCL_Pin::I2C1_PA4, I2C_SDA_Pin::I2C1_PA10);
 
@@ -129,8 +129,8 @@ void ensureOLEDOff() {
 
   GPIO_A.clear(1);
 
-  for (int i=0; i<1000; i++) {
-    asm volatile ("nop");
+  for (int i = 0; i < 1000; i++) {
+    asm volatile("nop");
   }
 
   isLEDOn = false;
@@ -169,8 +169,8 @@ extern "C" void main() {
   Clock::enableLSI();
   Clock::switchSysclk(Clock::Sysclk::HSI);
 
-  for (int i=0; i<5000000; i++) {
-    asm volatile ("nop");
+  for (int i = 0; i < 5000000; i++) {
+    asm volatile("nop");
   }
 
   GPIO_A.enable();
@@ -178,7 +178,8 @@ extern "C" void main() {
   GPIO_A.setMode(9, GPIO_MODE_OUTPUT);
 
   RealTimeClock::enable(RealTimeClock::RTCClock::LSI);
-  RealTimeClock::setupWakeupTimer(1, RealTimeClock::WakeupTimerClock::CK_SPRE, wakeupTimerHandler);
+  RealTimeClock::setupWakeupTimer(1, RealTimeClock::WakeupTimerClock::CK_SPRE,
+                                  wakeupTimerHandler);
 
   while (true) {
     switch (state) {

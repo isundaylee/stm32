@@ -4,10 +4,10 @@
 
 class DAC {
 private:
-  DAC_TypeDef *dac_;
+  DAC_TypeDef* dac_;
 
 public:
-  DAC(DAC_TypeDef *dac) : dac_(dac) {}
+  DAC(DAC_TypeDef* dac) : dac_(dac) {}
 
   void enable();
 

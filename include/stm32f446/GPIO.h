@@ -9,15 +9,15 @@ const uint32_t GPIO_MODE_ANALOG = 0b11;
 
 class GPIO {
 private:
-  GPIO_TypeDef *gpio_;
+  GPIO_TypeDef* gpio_;
 
 public:
-  GPIO(GPIO_TypeDef *gpio) { gpio_ = gpio; }
+  GPIO(GPIO_TypeDef* gpio) { gpio_ = gpio; }
 
-  GPIO(GPIO &&move) = delete;
-  GPIO(GPIO const &copy) = delete;
-  GPIO &operator=(GPIO &&move) = delete;
-  GPIO &operator=(GPIO const &copy) = delete;
+  GPIO(GPIO&& move) = delete;
+  GPIO(GPIO const& copy) = delete;
+  GPIO& operator=(GPIO&& move) = delete;
+  GPIO& operator=(GPIO const& copy) = delete;
 
   void enable();
 

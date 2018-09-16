@@ -49,7 +49,9 @@ extern "C" void isrRTC() {
   RTC->WPR = 0x64;
 }
 
-/* static */ void RealTimeClock::setupWakeupTimer(size_t count, WakeupTimerClock clock, void (*handler)(void)) {
+/* static */ void RealTimeClock::setupWakeupTimer(size_t count,
+                                                  WakeupTimerClock clock,
+                                                  void (*handler)(void)) {
   wakeupTimerHandler = handler;
 
   disableWriteProtection();

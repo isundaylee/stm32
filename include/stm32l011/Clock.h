@@ -4,9 +4,7 @@
 
 class Clock {
 public:
-  enum class Sysclk {
-    HSI
-  };
+  enum class Sysclk { HSI };
 
   Clock(Clock&&) = delete;
   Clock(Clock const&) = delete;

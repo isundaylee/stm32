@@ -9,7 +9,7 @@ extern "C" void isrTimer5();
 
 class Timer {
 private:
-  TIM_TypeDef *timer_;
+  TIM_TypeDef* timer_;
 
   void (*handler_)();
 
@@ -17,7 +17,7 @@ private:
   IRQn_Type irqN();
 
 public:
-  Timer(TIM_TypeDef *timer) : timer_(timer) {}
+  Timer(TIM_TypeDef* timer) : timer_(timer) {}
 
   uint32_t getPeripheralFrequency();
 

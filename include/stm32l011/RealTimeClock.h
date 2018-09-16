@@ -18,7 +18,8 @@ public:
 
   static void enable(RTCClock clock);
 
-  static void setupWakeupTimer(size_t count, WakeupTimerClock clock, void (*handler)(void));
+  static void setupWakeupTimer(size_t count, WakeupTimerClock clock,
+                               void (*handler)(void));
 
   static void (*wakeupTimerHandler)(void);
 };

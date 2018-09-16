@@ -20,7 +20,7 @@ typedef uint32_t size_t;
     asm volatile("nop");                                                       \
   } while (!(condition))
 
-#define FORCE_READ(reg) ((void) reg)
+#define FORCE_READ(reg) ((void)reg)
 
 #if 0
 

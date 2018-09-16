@@ -12,18 +12,18 @@ extern "C" void isrUSART6();
 
 class USART {
 private:
-  USART_TypeDef *usart_;
+  USART_TypeDef* usart_;
 
   RingBuffer<uint8_t, USART_RX_BUFFER_SIZE> buffer_;
 
 public:
-  USART(USART_TypeDef *usart) : usart_(usart) {}
+  USART(USART_TypeDef* usart) : usart_(usart) {}
 
   void enable(uint32_t baudRate);
 
   void write(uint8_t data);
-  void write(const char *data);
-  void write(uint8_t *data, size_t length);
+  void write(const char* data);
+  void write(uint8_t* data, size_t length);
 
   void enableTxDMA();
   void disableTxDMA();

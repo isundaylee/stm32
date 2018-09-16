@@ -9,8 +9,8 @@ private:
 public:
   RingBuffer() : head_(0), tail_(0) {}
 
-  RingBuffer(RingBuffer &&move) = delete;
-  RingBuffer(RingBuffer const &copy) = delete;
+  RingBuffer(RingBuffer&& move) = delete;
+  RingBuffer(RingBuffer const& copy) = delete;
 
   bool push(T value) volatile {
     if ((tail_ + 1) % bufferSize == head_) {
@@ -23,7 +23,7 @@ public:
     return true;
   }
 
-  bool pop(T &output) volatile {
+  bool pop(T& output) volatile {
     if (head_ == tail_) {
       // We're empty
       return false;

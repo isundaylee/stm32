@@ -8,13 +8,13 @@ void DMA::enable() {
   }
 }
 
-DMA_Stream_TypeDef *DMA::getStream(int streamNumber) {
+DMA_Stream_TypeDef* DMA::getStream(int streamNumber) {
   if (dma_ == DMA1) {
-    return reinterpret_cast<DMA_Stream_TypeDef *>(
+    return reinterpret_cast<DMA_Stream_TypeDef*>(
         DMA1_Stream0_BASE +
         (DMA1_Stream1_BASE - DMA1_Stream0_BASE) * streamNumber);
   } else if (dma_ == DMA2) {
-    return reinterpret_cast<DMA_Stream_TypeDef *>(
+    return reinterpret_cast<DMA_Stream_TypeDef*>(
         DMA2_Stream0_BASE +
         (DMA2_Stream1_BASE - DMA2_Stream0_BASE) * streamNumber);
   }
@@ -24,10 +24,10 @@ DMA_Stream_TypeDef *DMA::getStream(int streamNumber) {
 
 void DMA::configureStream(int streamNumber, uint32_t channel, uint32_t dir,
                           uint32_t n, uint32_t fifoThres, bool circular,
-                          uint32_t priority, volatile void *src,
-                          uint32_t srcSize, bool srcInc, volatile void *dst,
+                          uint32_t priority, volatile void* src,
+                          uint32_t srcSize, bool srcInc, volatile void* dst,
                           uint32_t dstSize, bool dstInc) {
-  DMA_Stream_TypeDef *stream = getStream(streamNumber);
+  DMA_Stream_TypeDef* stream = getStream(streamNumber);
 
   stream->CR = 0;
   stream->FCR = 0x21;
@@ -79,7 +79,7 @@ void DMA::configureStream(int streamNumber, uint32_t channel, uint32_t dir,
 }
 
 void DMA::enableStream(int streamNumber) {
-  DMA_Stream_TypeDef *stream = getStream(streamNumber);
+  DMA_Stream_TypeDef* stream = getStream(streamNumber);
 
   BIT_SET(stream->CR, DMA_SxCR_EN);
 }

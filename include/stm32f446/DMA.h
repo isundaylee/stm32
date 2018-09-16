@@ -23,19 +23,19 @@ const uint32_t DMA_FIFO_THRES_FULL = 0b11;
 
 class DMA {
 private:
-  DMA_TypeDef *dma_;
+  DMA_TypeDef* dma_;
 
-  DMA_Stream_TypeDef *getStream(int streamNumber);
+  DMA_Stream_TypeDef* getStream(int streamNumber);
 
 public:
-  DMA(DMA_TypeDef *dma) : dma_(dma) {}
+  DMA(DMA_TypeDef* dma) : dma_(dma) {}
 
   void enable();
 
   void configureStream(int streamNumber, uint32_t channel, uint32_t dir,
                        uint32_t n, uint32_t fifoThres, bool circular,
-                       uint32_t priority, volatile void *src, uint32_t srcSize,
-                       bool srcInc, volatile void *dst, uint32_t dstSize,
+                       uint32_t priority, volatile void* src, uint32_t srcSize,
+                       bool srcInc, volatile void* dst, uint32_t dstSize,
                        bool dstInc);
   void enableStream(int streamNumber);
 };
