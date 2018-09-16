@@ -14,5 +14,6 @@ public:
   Clock& operator=(Clock const&) = delete;
 
   static void enableHSI();
+  static void enableLSI();
   static void switchSysclk(Sysclk sysclk);
 };

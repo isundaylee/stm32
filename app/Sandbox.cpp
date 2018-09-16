@@ -1,6 +1,7 @@
 #include "GPIO.h"
 #include "I2C.h"
 #include "Clock.h"
+#include "RealTimeClock.h"
 
 #include "OLED.h"
 
@@ -8,7 +9,19 @@
 
 OLED<0x3C, 64, 128> oled(I2C_1);
 
+enum class State {
+  IDLE,
+  COUNTING,
+  FIRING,
+};
+
+State state = State::COUNTING;
+bool isLEDOn = false;
 size_t countdown = 10;
+
+////////////////////////////////////////////////////////////////////////////////
+// Rendering code
+////////////////////////////////////////////////////////////////////////////////
 
 uint8_t const* digitToSprite(int digit) {
   switch (digit) {
@@ -37,7 +50,7 @@ uint8_t const* digitToSprite(int digit) {
   return 0;
 }
 
-void updateCountdown() {
+void renderCountdown(size_t countdown) {
   size_t minutes = countdown / 60;
   size_t seconds = countdown % 60;
 
@@ -51,6 +64,27 @@ void updateCountdown() {
   oled.render();
 }
 
+void renderFiring(size_t countdown) {
+  if (countdown % 2 == 0) {
+    oled.clearScreen();
+    oled.render();
+  } else {
+    renderCountdown(0);
+  }
+}
+
+void rerender() {
+  if (state == State::COUNTING) {
+    renderCountdown(countdown);
+  } else if (state == State::FIRING) {
+    renderFiring(countdown);
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Power management code
+////////////////////////////////////////////////////////////////////////////////
+
 void stop() {
   PWR->CR |= PWR_CR_CWUF;
   PWR->CR &= ~PWR_CR_PDDS;
@@ -62,7 +96,15 @@ void stop() {
   asm ("wfi");
 }
 
-void turnOLEDOn() {
+////////////////////////////////////////////////////////////////////////////////
+// OLED switching code
+////////////////////////////////////////////////////////////////////////////////
+
+void ensureOLEDOn() {
+  if (isLEDOn) {
+    return;
+  }
+
   GPIO_A.set(1);
 
   for (int i=0; i<100000; i++)
@@ -75,36 +117,79 @@ void turnOLEDOn() {
   oled.disableEntireDisplay();
   oled.turnDisplayOn();
 
-  updateCountdown();
+  isLEDOn = true;
 }
 
-void turnOLEDOff() {
+void ensureOLEDOff() {
+  if (!isLEDOn) {
+    return;
+  }
+
   GPIO_A.clear(1);
 
   for (int i=0; i<1000; i++) {
     asm volatile ("nop");
   }
+
+  isLEDOn = false;
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// ISRs
+////////////////////////////////////////////////////////////////////////////////
+
+void wakeupTimerHandler() {
+  switch (state) {
+  case State::IDLE:
+    break;
+  case State::COUNTING:
+    if (--countdown == 0) {
+      state = State::FIRING;
+      countdown = 10;
+    }
+    break;
+  case State::FIRING:
+    if (--countdown == 0) {
+      state = State::IDLE;
+    }
+    break;
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Main!
+////////////////////////////////////////////////////////////////////////////////
 
 extern "C" void main() {
   Clock::enableHSI();
+  Clock::enableLSI();
   Clock::switchSysclk(Clock::Sysclk::HSI);
+
+  for (int i=0; i<5000000; i++) {
+    asm volatile ("nop");
+  }
 
   GPIO_A.enable();
   GPIO_A.setMode(1, GPIO_MODE_OUTPUT);
 
-  turnOLEDOn();
+  RealTimeClock::enable(RealTimeClock::RTCClock::LSI);
+  RealTimeClock::setupWakeupTimer(1, RealTimeClock::WakeupTimerClock::CK_SPRE, wakeupTimerHandler);
 
   while (true) {
-    updateCountdown();
-
-    if (countdown > 0) {
-      countdown --;
+    switch (state) {
+    case State::IDLE:
+      ensureOLEDOff();
+      break;
+    case State::COUNTING:
+      ensureOLEDOn();
+      rerender();
+      break;
+    case State::FIRING:
+      ensureOLEDOn();
+      rerender();
+      break;
     }
 
-    if (countdown == 0) {
-      turnOLEDOff();
-      stop();
-    }
+    stop();
   }
 }

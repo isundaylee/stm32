@@ -5,6 +5,11 @@
   WAIT_UNTIL((RCC->CR & RCC_CR_HSIRDY) != 0);
 }
 
+/* static */ void Clock::enableLSI() {
+  RCC->CSR |= RCC_CSR_LSION;
+  WAIT_UNTIL((RCC->CSR & RCC_CSR_LSIRDY) != 0);
+}
+
 /* static */ void Clock::switchSysclk(Sysclk sysclk) {
   switch (sysclk) {
   case Sysclk::HSI:
