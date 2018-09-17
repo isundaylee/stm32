@@ -2,19 +2,23 @@
 
 #include <DeviceHeader.h>
 
-const uint32_t GPIO_MODE_INPUT = 0b00;
-const uint32_t GPIO_MODE_OUTPUT = 0b01;
-const uint32_t GPIO_MODE_ALTERNATE = 0b10;
-const uint32_t GPIO_MODE_ANALOG = 0b11;
-
-const uint32_t GPIO_OUTPUT_MODE_PUSH_PULL = 0b0;
-const uint32_t GPIO_OUTPUT_MODE_OPEN_DRAIN = 0b1;
-
 class GPIO {
 private:
   GPIO_TypeDef* gpio_;
 
 public:
+  enum class PinMode {
+    INPUT,
+    OUTPUT,
+    ALTERNATE,
+    ANALOG,
+  };
+
+  enum class OutputMode {
+    PUSH_PULL,
+    OPEN_DRAIN,
+  };
+
   enum class PullDirection {
     NONE,
     PULL_UP,
@@ -34,8 +38,8 @@ public:
 
   void enable();
 
-  void setMode(int pin, uint32_t mode, uint32_t alternate = 0);
-  void setOutputMode(int pin, uint32_t mode);
+  void setMode(int pin, PinMode mode, uint32_t alternate = 0);
+  void setOutputMode(int pin, OutputMode mode);
   void setPullDirection(int pin, PullDirection direction);
   void enableExternalInterrupt(int pin, TriggerDirection direction,
                                InterruptHandler handler);

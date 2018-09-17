@@ -60,9 +60,26 @@ void GPIO::enable() {
   }
 }
 
-void GPIO::setMode(int pin, uint32_t mode, uint32_t alternate /* = 0 */) {
+void GPIO::setMode(int pin, PinMode mode, uint32_t alternate /* = 0 */) {
+  uint32_t modeValue;
+
+  switch (mode) {
+  case PinMode::INPUT:
+    modeValue = 0b00;
+    break;
+  case PinMode::OUTPUT:
+    modeValue = 0b01;
+    break;
+  case PinMode::ALTERNATE:
+    modeValue = 0b10;
+    break;
+  case PinMode::ANALOG:
+    modeValue = 0b11;
+    break;
+  }
+
   gpio_->MODER &= ~(0b11U << (2 * pin));
-  gpio_->MODER |= (mode << (2 * pin));
+  gpio_->MODER |= (modeValue << (2 * pin));
   gpio_->AFR[pin / 8] &= ~(0b1111 << (4 * (pin % 8)));
   gpio_->AFR[pin / 8] |= (alternate << (4 * (pin % 8)));
 }
@@ -120,7 +137,18 @@ void GPIO::enableExternalInterrupt(int pin, TriggerDirection direction,
   }
 }
 
-void GPIO::setOutputMode(int pin, uint32_t mode) {
+void GPIO::setOutputMode(int pin, OutputMode mode) {
+  uint32_t modeValue;
+
+  switch (mode) {
+  case OutputMode::PUSH_PULL:
+    modeValue = 0b0;
+    break;
+  case OutputMode::OPEN_DRAIN:
+    modeValue = 0b1;
+    break;
+  }
+
   gpio_->OTYPER &= ~(0b1 << pin);
-  gpio_->OTYPER |= (mode << pin);
+  gpio_->OTYPER |= (modeValue << pin);
 }

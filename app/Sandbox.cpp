@@ -197,9 +197,9 @@ extern "C" void main() {
   }
 
   GPIO_A.enable();
-  GPIO_A.setMode(0, GPIO_MODE_OUTPUT);
-  GPIO_A.setMode(1, GPIO_MODE_OUTPUT);
-  GPIO_A.setMode(9, GPIO_MODE_INPUT);
+  GPIO_A.setMode(0, GPIO::PinMode::OUTPUT);
+  GPIO_A.setMode(1, GPIO::PinMode::OUTPUT);
+  GPIO_A.setMode(9, GPIO::PinMode::INPUT);
   GPIO_A.setPullDirection(9, GPIO::PullDirection::PULL_UP);
   GPIO_A.enableExternalInterrupt(9, GPIO::TriggerDirection::FALLING_EDGE,
                                  add1MinuteButtonHandler);
