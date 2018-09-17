@@ -5,6 +5,10 @@ GPIO GPIO_B(GPIOB);
 GPIO GPIO_C(GPIOC);
 
 static void triggerInterrupt(int pin) {
+  if ((EXTI->PR & (1U << pin)) == 0) {
+    return;
+  }
+
   int bitPos = 4 * (pin % 4);
 
   switch ((SYSCFG->EXTICR[pin / 4] & (0xFU << bitPos)) >> bitPos) {
@@ -24,6 +28,8 @@ static void triggerInterrupt(int pin) {
     }
     break;
   }
+
+  EXTI->PR |= (1U << pin);
 }
 
 extern "C" void isrEXTI01() {

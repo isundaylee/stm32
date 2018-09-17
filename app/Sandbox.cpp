@@ -2,6 +2,7 @@
 #include "GPIO.h"
 #include "I2C.h"
 #include "RealTimeClock.h"
+#include "Tick.h"
 
 #include "OLED.h"
 
@@ -55,7 +56,7 @@ void renderCountdown(size_t countdown) {
   size_t seconds = countdown % 60;
 
   oled.clearScreen();
-  oled.sprite(12, 0, 40, 24, digitToSprite(minutes / 100));
+  oled.sprite(12, 0, 40, 24, digitToSprite(minutes / 10));
   oled.sprite(12, 26, 40, 24, digitToSprite(minutes % 10));
   oled.sprite(12, 52, 40, 24, BITMAP_CHAR_COLON);
   oled.sprite(12, 78, 40, 24, digitToSprite(seconds / 10));
@@ -86,8 +87,6 @@ void rerender() {
 ////////////////////////////////////////////////////////////////////////////////
 
 void stop() {
-  return;
-
   PWR->CR |= PWR_CR_CWUF;
   PWR->CR &= ~PWR_CR_PDDS;
 
@@ -160,7 +159,27 @@ void wakeupTimerHandler() {
   }
 }
 
-void add1MinuteButtonHandler() { countdown += 1; }
+static void addTime(size_t time) {
+  switch (state) {
+  case State::IDLE:
+  case State::FIRING:
+    countdown = time;
+    state = State::COUNTING;
+    break;
+  case State::COUNTING:
+    countdown += time;
+    break;
+  }
+}
+
+void add1MinuteButtonHandler() {
+  static size_t lastPressedTick = 0;
+
+  if (Tick::value - lastPressedTick >= 100) {
+    lastPressedTick = Tick::value;
+    addTime(60);
+  }
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Main!
@@ -171,11 +190,14 @@ extern "C" void main() {
   Clock::enableLSI();
   Clock::switchSysclk(Clock::Sysclk::HSI);
 
+  Tick::enable();
+
   for (int i = 0; i < 5000000; i++) {
     asm volatile("nop");
   }
 
   GPIO_A.enable();
+  GPIO_A.setMode(0, GPIO_MODE_OUTPUT);
   GPIO_A.setMode(1, GPIO_MODE_OUTPUT);
   GPIO_A.setMode(9, GPIO_MODE_INPUT);
   GPIO_A.setPullDirection(9, GPIO::PullDirection::PULL_UP);
