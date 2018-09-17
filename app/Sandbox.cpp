@@ -16,9 +16,9 @@ enum class State {
   FIRING,
 };
 
-State state = State::COUNTING;
 bool isLEDOn = false;
-size_t countdown = 10;
+State state = State::IDLE;
+size_t countdown = 0;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Rendering code
