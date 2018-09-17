@@ -3,22 +3,22 @@
 
 I2C I2C_1(I2C1);
 
-void I2C::enable(I2C_SCL_Pin scl, I2C_SDA_Pin sda) {
+void I2C::enable(SCLPin scl, SDAPin sda) {
   // Sets up SCL
   switch (scl) {
-  case I2C_SCL_Pin::I2C1_PA4:
+  case SCLPin::I2C1_PA4:
     GPIO_A.setMode(4, GPIO::PinMode::ALTERNATE, 3);
     GPIO_A.setOutputMode(4, GPIO::OutputMode::OPEN_DRAIN);
     break;
-  case I2C_SCL_Pin::I2C1_PA9:
+  case SCLPin::I2C1_PA9:
     GPIO_A.setMode(9, GPIO::PinMode::ALTERNATE, 1);
     GPIO_A.setOutputMode(9, GPIO::OutputMode::OPEN_DRAIN);
     break;
-  case I2C_SCL_Pin::I2C1_PB6:
+  case SCLPin::I2C1_PB6:
     GPIO_B.setMode(6, GPIO::PinMode::ALTERNATE, 1);
     GPIO_B.setOutputMode(6, GPIO::OutputMode::OPEN_DRAIN);
     break;
-  case I2C_SCL_Pin::I2C1_PB8:
+  case SCLPin::I2C1_PB8:
     GPIO_B.setMode(6, GPIO::PinMode::ALTERNATE, 4);
     GPIO_B.setOutputMode(6, GPIO::OutputMode::OPEN_DRAIN);
     break;
@@ -26,15 +26,15 @@ void I2C::enable(I2C_SCL_Pin scl, I2C_SDA_Pin sda) {
 
   // Sets up SDA
   switch (sda) {
-  case I2C_SDA_Pin::I2C1_PA10:
+  case SDAPin::I2C1_PA10:
     GPIO_A.setMode(10, GPIO::PinMode::ALTERNATE, 1);
     GPIO_A.setOutputMode(10, GPIO::OutputMode::OPEN_DRAIN);
     break;
-  case I2C_SDA_Pin::I2C1_PA13:
+  case SDAPin::I2C1_PA13:
     GPIO_A.setMode(13, GPIO::PinMode::ALTERNATE, 3);
     GPIO_A.setOutputMode(13, GPIO::OutputMode::OPEN_DRAIN);
     break;
-  case I2C_SDA_Pin::I2C1_PB7:
+  case SDAPin::I2C1_PB7:
     GPIO_B.setMode(7, GPIO::PinMode::ALTERNATE, 1);
     GPIO_B.setOutputMode(7, GPIO::OutputMode::OPEN_DRAIN);
     break;

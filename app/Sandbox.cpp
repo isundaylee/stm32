@@ -111,7 +111,7 @@ void ensureOLEDOn() {
   for (int i = 0; i < 100000; i++)
     asm volatile("nop");
 
-  I2C_1.enable(I2C_SCL_Pin::I2C1_PA4, I2C_SDA_Pin::I2C1_PA10);
+  I2C_1.enable(I2C::SCLPin::I2C1_PA4, I2C::SDAPin::I2C1_PA10);
 
   oled.turnDisplayOff();
   oled.enableChargePump();
