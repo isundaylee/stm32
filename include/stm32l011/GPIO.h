@@ -15,6 +15,16 @@ private:
   GPIO_TypeDef* gpio_;
 
 public:
+  enum class PullDirection {
+    NONE,
+    PULL_UP,
+    PULL_DOWN,
+  };
+
+  enum class TriggerDirection { RISING_EDGE, FALLING_EDGE };
+
+  InterruptHandler interruptHandlers[16] = {0};
+
   GPIO(GPIO_TypeDef* gpio) { gpio_ = gpio; }
 
   GPIO(GPIO&& move) = delete;
@@ -26,6 +36,9 @@ public:
 
   void setMode(int pin, uint32_t mode, uint32_t alternate = 0);
   void setOutputMode(int pin, uint32_t mode);
+  void setPullDirection(int pin, PullDirection direction);
+  void enableExternalInterrupt(int pin, TriggerDirection direction,
+                               InterruptHandler handler);
 
   void set(int pin) { gpio_->BSRR = (1UL << pin); }
   void clear(int pin) { gpio_->BSRR = (1UL << (pin + 16)); }

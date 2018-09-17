@@ -4,6 +4,8 @@
 
 typedef uint32_t size_t;
 
+typedef void (*InterruptHandler)(void);
+
 #define FIELD_GET(reg, field) ((reg & field) >> (field##_Pos))
 #define FIELD_SET(reg, field, value)                                           \
   do {                                                                         \

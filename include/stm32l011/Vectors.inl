@@ -1,4 +1,7 @@
 extern "C" void isrRTC();
+extern "C" void isrEXTI01();
+extern "C" void isrEXTI23();
+extern "C" void isrEXTI415();
 
 __attribute__ ((section (".isr_vectors")))
 __attribute__ ((used))
@@ -24,9 +27,9 @@ static void (*_isrVectors[])() = {
     &isrRTC,
     &_spin,
     &_spin,
-    &_spin,
-    &_spin,
-    &_spin,
+    &isrEXTI01,
+    &isrEXTI23,
+    &isrEXTI415,
     &_spin,
     &_spin,
     &_spin,

@@ -55,7 +55,7 @@ void renderCountdown(size_t countdown) {
   size_t seconds = countdown % 60;
 
   oled.clearScreen();
-  oled.sprite(12, 0, 40, 24, digitToSprite(minutes / 10));
+  oled.sprite(12, 0, 40, 24, digitToSprite(minutes / 100));
   oled.sprite(12, 26, 40, 24, digitToSprite(minutes % 10));
   oled.sprite(12, 52, 40, 24, BITMAP_CHAR_COLON);
   oled.sprite(12, 78, 40, 24, digitToSprite(seconds / 10));
@@ -160,6 +160,8 @@ void wakeupTimerHandler() {
   }
 }
 
+void add1MinuteButtonHandler() { countdown += 1; }
+
 ////////////////////////////////////////////////////////////////////////////////
 // Main!
 ////////////////////////////////////////////////////////////////////////////////
@@ -175,7 +177,10 @@ extern "C" void main() {
 
   GPIO_A.enable();
   GPIO_A.setMode(1, GPIO_MODE_OUTPUT);
-  GPIO_A.setMode(9, GPIO_MODE_OUTPUT);
+  GPIO_A.setMode(9, GPIO_MODE_INPUT);
+  GPIO_A.setPullDirection(9, GPIO::PullDirection::PULL_UP);
+  GPIO_A.enableExternalInterrupt(9, GPIO::TriggerDirection::FALLING_EDGE,
+                                 add1MinuteButtonHandler);
 
   RealTimeClock::enable(RealTimeClock::RTCClock::LSI);
   RealTimeClock::setupWakeupTimer(1, RealTimeClock::WakeupTimerClock::CK_SPRE,
