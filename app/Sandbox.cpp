@@ -3,6 +3,7 @@
 #include "I2C.h"
 #include "RealTimeClock.h"
 #include "Tick.h"
+#include "Timer.h"
 
 #include "OLED.h"
 
@@ -87,8 +88,6 @@ void rerender() {
 ////////////////////////////////////////////////////////////////////////////////
 
 void stop() {
-  return;
-  
   PWR->CR |= PWR_CR_CWUF;
   PWR->CR &= ~PWR_CR_PDDS;
 
@@ -141,6 +140,14 @@ void ensureOLEDOff() {
 // ISRs
 ////////////////////////////////////////////////////////////////////////////////
 
+void timerHandler() {
+  if (countdown % 2 == 0) {
+    GPIO_A.toggle(7);
+  } else {
+    GPIO_A.clear(7);
+  }
+}
+
 void wakeupTimerHandler() {
   switch (state) {
   case State::IDLE:
@@ -149,11 +156,13 @@ void wakeupTimerHandler() {
     if (--countdown == 0) {
       state = State::FIRING;
       countdown = 10;
+      Timer_2.startPeriodic(16, 1000, timerHandler);
     }
     break;
   case State::FIRING:
     if (--countdown == 0) {
       state = State::IDLE;
+      Timer_2.stop();
     }
     break;
   }
@@ -165,6 +174,7 @@ static void addTime(size_t time) {
   case State::FIRING:
     countdown = time;
     state = State::COUNTING;
+    Timer_2.stop();
     break;
   case State::COUNTING:
     countdown += time;
@@ -205,6 +215,8 @@ extern "C" void main() {
 
   Tick::enable();
 
+  Timer_2.enable();
+
   for (int i = 0; i < 5000000; i++) {
     asm volatile("nop");
   }
@@ -234,6 +246,8 @@ extern "C" void main() {
       break;
     }
 
-    stop();
+    if (state != State::FIRING) {
+      stop();
+    }
   }
 }

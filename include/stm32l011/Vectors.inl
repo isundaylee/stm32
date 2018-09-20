@@ -3,6 +3,7 @@ extern "C" void isrEXTI01();
 extern "C" void isrEXTI23();
 extern "C" void isrEXTI415();
 extern "C" void isrSysTick();
+extern "C" void isrTIM2();
 
 __attribute__ ((section (".isr_vectors")))
 __attribute__ ((used))
@@ -38,7 +39,7 @@ static void (*_isrVectors[])() = {
     &_spin,
     &_spin,
     &_spin,
-    &_spin,
+    &isrTIM2,
     &_spin,
     &_spin,
     &_spin,
