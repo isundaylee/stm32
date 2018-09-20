@@ -87,6 +87,8 @@ void rerender() {
 ////////////////////////////////////////////////////////////////////////////////
 
 void stop() {
+  return;
+  
   PWR->CR |= PWR_CR_CWUF;
   PWR->CR &= ~PWR_CR_PDDS;
 
@@ -140,8 +142,6 @@ void ensureOLEDOff() {
 ////////////////////////////////////////////////////////////////////////////////
 
 void wakeupTimerHandler() {
-  GPIO_A.toggle(9);
-
   switch (state) {
   case State::IDLE:
     break;
@@ -174,11 +174,20 @@ static void addTime(size_t time) {
 
 void add1MinuteButtonHandler() {
   static size_t lastPressedTick = 0;
+  static bool buttonPressed = false;
+  size_t currentTick = Tick::value;
 
-  if (Tick::value - lastPressedTick >= 100) {
-    lastPressedTick = Tick::value;
+  if (currentTick - lastPressedTick < 5) {
+    lastPressedTick = currentTick;
+    return;
+  }
+
+  buttonPressed = !buttonPressed;
+  if (buttonPressed) {
     addTime(60);
   }
+
+  lastPressedTick = currentTick;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -190,18 +199,20 @@ extern "C" void main() {
   Clock::enableLSI();
   Clock::switchSysclk(Clock::Sysclk::HSI);
 
+  GPIO_A.enable();
+  GPIO_A.setMode(0, GPIO::PinMode::OUTPUT);
+  GPIO_A.setMode(7, GPIO::PinMode::OUTPUT);
+
   Tick::enable();
 
   for (int i = 0; i < 5000000; i++) {
     asm volatile("nop");
   }
 
-  GPIO_A.enable();
-  GPIO_A.setMode(0, GPIO::PinMode::OUTPUT);
   GPIO_A.setMode(1, GPIO::PinMode::OUTPUT);
   GPIO_A.setMode(9, GPIO::PinMode::INPUT);
   GPIO_A.setPullDirection(9, GPIO::PullDirection::PULL_UP);
-  GPIO_A.enableExternalInterrupt(9, GPIO::TriggerDirection::FALLING_EDGE,
+  GPIO_A.enableExternalInterrupt(9, GPIO::TriggerDirection::BOTH,
                                  add1MinuteButtonHandler);
 
   RealTimeClock::enable(RealTimeClock::RTCClock::LSI);

@@ -122,8 +122,14 @@ void GPIO::enableExternalInterrupt(int pin, TriggerDirection direction,
   switch (direction) {
   case TriggerDirection::RISING_EDGE:
     EXTI->RTSR |= (1U << pin);
+    EXTI->FTSR &= ~(1U << pin);
     break;
   case TriggerDirection::FALLING_EDGE:
+    EXTI->RTSR &= ~(1U << pin);
+    EXTI->FTSR |= (1U << pin);
+    break;
+  case TriggerDirection::BOTH:
+    EXTI->RTSR |= (1U << pin);
     EXTI->FTSR |= (1U << pin);
     break;
   }

@@ -25,7 +25,11 @@ public:
     PULL_DOWN,
   };
 
-  enum class TriggerDirection { RISING_EDGE, FALLING_EDGE };
+  enum class TriggerDirection {
+    RISING_EDGE,
+    FALLING_EDGE,
+    BOTH,
+  };
 
   InterruptHandler interruptHandlers[16] = {0};
 

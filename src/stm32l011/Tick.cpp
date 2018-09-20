@@ -1,4 +1,5 @@
 #include "Tick.h"
+#include "GPIO.h"
 
 /* static */ size_t Tick::value = 0;
 
