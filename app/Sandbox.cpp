@@ -21,6 +21,13 @@ bool isLEDOn = false;
 State state = State::IDLE;
 size_t countdown = 0;
 
+static const uint32_t PIN_OLED_ON = 7;
+
+static const uint32_t PIN_BUT_1 = 1;
+static const uint32_t PIN_BUT_2 = 2;
+static const uint32_t PIN_BUT_3 = 3;
+static const uint32_t PIN_BUT_4 = 4;
+
 ////////////////////////////////////////////////////////////////////////////////
 // Rendering code
 ////////////////////////////////////////////////////////////////////////////////
@@ -107,12 +114,12 @@ void ensureOLEDOn() {
     return;
   }
 
-  GPIO_A.set(1);
+  GPIO_A.set(PIN_OLED_ON);
 
   for (int i = 0; i < 100000; i++)
     asm volatile("nop");
 
-  I2C_1.enable(I2C::SCLPin::I2C1_PA4, I2C::SDAPin::I2C1_PA10);
+  I2C_1.enable(I2C::SCLPin::I2C1_PA9, I2C::SDAPin::I2C1_PA10);
 
   oled.turnDisplayOff();
   oled.enableChargePump();
@@ -127,7 +134,7 @@ void ensureOLEDOff() {
     return;
   }
 
-  GPIO_A.clear(1);
+  GPIO_A.clear(PIN_OLED_ON);
 
   for (int i = 0; i < 1000; i++) {
     asm volatile("nop");
@@ -142,9 +149,9 @@ void ensureOLEDOff() {
 
 void timerHandler() {
   if (countdown % 2 == 0) {
-    GPIO_A.toggle(7);
+    GPIO_C.toggle(14);
   } else {
-    GPIO_A.clear(7);
+    GPIO_C.clear(14);
   }
 }
 
@@ -182,9 +189,7 @@ static void addTime(size_t time) {
   }
 }
 
-void add1MinuteButtonHandler() {
-  static size_t lastPressedTick = 0;
-  static bool buttonPressed = false;
+void buttonHandler(size_t& lastPressedTick, bool& buttonPressed, size_t time) {
   size_t currentTick = Tick::value;
 
   if (currentTick - lastPressedTick < 5) {
@@ -194,10 +199,34 @@ void add1MinuteButtonHandler() {
 
   buttonPressed = !buttonPressed;
   if (buttonPressed) {
-    addTime(60);
+    addTime(time);
   }
 
   lastPressedTick = currentTick;
+}
+
+void button1Handler() {
+  static size_t lastPressedTick = 0;
+  static bool buttonPressed = false;
+  buttonHandler(lastPressedTick, buttonPressed, 15);
+}
+
+void button2Handler() {
+  static size_t lastPressedTick = 0;
+  static bool buttonPressed = false;
+  buttonHandler(lastPressedTick, buttonPressed, 60);
+}
+
+void button3Handler() {
+  static size_t lastPressedTick = 0;
+  static bool buttonPressed = false;
+  buttonHandler(lastPressedTick, buttonPressed, 300);
+}
+
+void button4Handler() {
+  static size_t lastPressedTick = 0;
+  static bool buttonPressed = false;
+  buttonHandler(lastPressedTick, buttonPressed, 600);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -211,7 +240,9 @@ extern "C" void main() {
 
   GPIO_A.enable();
   GPIO_A.setMode(0, GPIO::PinMode::OUTPUT);
-  GPIO_A.setMode(7, GPIO::PinMode::OUTPUT);
+
+  GPIO_C.enable();
+  GPIO_C.setMode(14, GPIO::PinMode::OUTPUT);
 
   Tick::enable();
 
@@ -221,11 +252,27 @@ extern "C" void main() {
     asm volatile("nop");
   }
 
-  GPIO_A.setMode(1, GPIO::PinMode::OUTPUT);
-  GPIO_A.setMode(9, GPIO::PinMode::INPUT);
-  GPIO_A.setPullDirection(9, GPIO::PullDirection::PULL_UP);
-  GPIO_A.enableExternalInterrupt(9, GPIO::TriggerDirection::BOTH,
-                                 add1MinuteButtonHandler);
+  GPIO_A.setMode(PIN_OLED_ON, GPIO::PinMode::OUTPUT);
+
+  GPIO_A.setMode(PIN_BUT_1, GPIO::PinMode::INPUT);
+  GPIO_A.setPullDirection(PIN_BUT_1, GPIO::PullDirection::PULL_UP);
+  GPIO_A.enableExternalInterrupt(PIN_BUT_1, GPIO::TriggerDirection::BOTH,
+                                 button1Handler);
+
+  GPIO_A.setMode(PIN_BUT_2, GPIO::PinMode::INPUT);
+  GPIO_A.setPullDirection(PIN_BUT_2, GPIO::PullDirection::PULL_UP);
+  GPIO_A.enableExternalInterrupt(PIN_BUT_2, GPIO::TriggerDirection::BOTH,
+                                 button2Handler);
+
+  GPIO_A.setMode(PIN_BUT_3, GPIO::PinMode::INPUT);
+  GPIO_A.setPullDirection(PIN_BUT_3, GPIO::PullDirection::PULL_UP);
+  GPIO_A.enableExternalInterrupt(PIN_BUT_3, GPIO::TriggerDirection::BOTH,
+                                 button3Handler);
+
+  GPIO_A.setMode(PIN_BUT_4, GPIO::PinMode::INPUT);
+  GPIO_A.setPullDirection(PIN_BUT_4, GPIO::PullDirection::PULL_UP);
+  GPIO_A.enableExternalInterrupt(PIN_BUT_4, GPIO::TriggerDirection::BOTH,
+                                 button4Handler);
 
   RealTimeClock::enable(RealTimeClock::RTCClock::LSI);
   RealTimeClock::setupWakeupTimer(1, RealTimeClock::WakeupTimerClock::CK_SPRE,
