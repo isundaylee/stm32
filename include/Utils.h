@@ -22,11 +22,17 @@ typedef void (*InterruptHandler)(void);
     asm volatile("nop");                                                       \
   } while (!(condition))
 
+#define DELAY(cycles)                                                          \
+  do {                                                                         \
+    int counter = cycles;                                                      \
+    WAIT_UNTIL((--counter) == 0);                                              \
+  } while (false)
+
 #define FORCE_READ(reg) ((void)reg)
 
-#if 0
+#if 1
 
-const char *HexString(uint32_t n);
-const char *DecString(uint32_t n);
+const char* HexString(uint32_t n);
+const char* DecString(uint32_t n);
 
 #endif

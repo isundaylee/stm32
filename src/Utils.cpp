@@ -1,6 +1,6 @@
 #include <Utils.h>
 
-#if 0
+#if 1
 
 const char *HexString(uint32_t n) {
   static char buffer[11];

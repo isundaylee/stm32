@@ -1,2 +1,2 @@
-target extended-remote :4242
+target extended-remote :2331
 file build/Sandbox.elf
