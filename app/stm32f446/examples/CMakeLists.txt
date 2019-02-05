@@ -1,3 +1,4 @@
 add_subdirectory(gpio_blinky)
 add_subdirectory(timer_blinky)
 add_subdirectory(usart_hello)
+add_subdirectory(usart_tx_dma)
