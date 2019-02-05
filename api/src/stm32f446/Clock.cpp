@@ -47,8 +47,8 @@
   }
 }
 
-/* static */ void Clock::configureMCO1(uint32_t source, uint32_t prescalar) {
-  FIELD_SET(RCC->CFGR, RCC_CFGR_MCO1, source);
+/* static */ void Clock::configureMCO1(MCO1Source source, uint32_t prescalar) {
+  FIELD_SET(RCC->CFGR, RCC_CFGR_MCO1, E2I(source));
   FIELD_SET(RCC->CFGR, RCC_CFGR_MCO1PRE, 0);
 
   if (prescalar != 1) {
@@ -56,8 +56,8 @@
   }
 }
 
-/* static */ void Clock::configureMCO2(uint32_t source, uint32_t prescalar) {
-  FIELD_SET(RCC->CFGR, RCC_CFGR_MCO2, source);
+/* static */ void Clock::configureMCO2(MCO2Source source, uint32_t prescalar) {
+  FIELD_SET(RCC->CFGR, RCC_CFGR_MCO2, E2I(source));
   FIELD_SET(RCC->CFGR, RCC_CFGR_MCO2PRE, 0);
 
   if (prescalar != 1) {

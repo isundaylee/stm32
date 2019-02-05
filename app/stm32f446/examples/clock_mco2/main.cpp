@@ -11,7 +11,7 @@ extern "C" void main() {
   GPIO_C.enable();
   GPIO_C.setMode(9, GPIO::PinMode::ALTERNATE, 0);
 
-  Clock::configureMCO2(CLOCK_MCO2_SOURCE_SYSCLK, 5);
+  Clock::configureMCO2(Clock::MCO2Source::SYSCLK, 5);
 
   while (true) {
   }

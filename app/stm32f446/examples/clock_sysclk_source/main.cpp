@@ -1,7 +1,7 @@
 #include <Utils.h>
 
-#include <GPIO.h>
 #include <Clock.h>
+#include <GPIO.h>
 
 ////////////////////////////////////////////////////////////////////////////////
 // Main!
@@ -14,7 +14,7 @@ extern "C" void main() {
   Clock::configurePLL(16, 50);
   Clock::switchSysclk(Clock::SysclkSource::PLL);
 
-  Clock::configureMCO2(CLOCK_MCO2_SOURCE_SYSCLK, 5);
+  Clock::configureMCO2(Clock::MCO2Source::SYSCLK, 5);
 
   while (true) {
   }

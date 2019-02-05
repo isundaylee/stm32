@@ -2,16 +2,6 @@
 
 #include <DeviceHeader.h>
 
-const uint32_t CLOCK_MCO1_SOURCE_HSI = 0b00;
-const uint32_t CLOCK_MCO1_SOURCE_LSE = 0b01;
-const uint32_t CLOCK_MCO1_SOURCE_HSE = 0b10;
-const uint32_t CLOCK_MCO1_SOURCE_PLL = 0b11;
-
-const uint32_t CLOCK_MCO2_SOURCE_SYSCLK = 0b00;
-const uint32_t CLOCK_MCO2_SOURCE_PLLI2S = 0b01;
-const uint32_t CLOCK_MCO2_SOURCE_HSE = 0b10;
-const uint32_t CLOCK_MCO2_SOURCE_PLL = 0b11;
-
 const uint32_t CLOCK_AHB_PRESCALER_1 = 0b0000;
 const uint32_t CLOCK_AHB_PRESCALER_2 = 0b1000;
 const uint32_t CLOCK_AHB_PRESCALER_4 = 0b1001;
@@ -40,13 +30,27 @@ public:
     PLLR = RCC_CFGR_SW_PLLR,
   };
 
+  enum class MCO1Source {
+    HSI = 0b00,
+    LSE = 0b01,
+    HSE = 0b10,
+    PLL = 0b11,
+  };
+
+  enum class MCO2Source {
+    SYSCLK = 0b00,
+    PLLI2S = 0b01,
+    HSE = 0b10,
+    PLL = 0b11,
+  };
+
   static uint32_t sysclkFrequency;
 
   static void switchSysclk(SysclkSource systemClock);
 
   static void configurePLL(uint32_t pllM, uint32_t pllN);
-  static void configureMCO1(uint32_t source, uint32_t prescalar);
-  static void configureMCO2(uint32_t source, uint32_t prescalar);
+  static void configureMCO1(MCO1Source source, uint32_t prescalar);
+  static void configureMCO2(MCO2Source source, uint32_t prescalar);
   static void configureAHBPrescaler(uint32_t prescaler);
   static void configureAPB1Prescaler(uint32_t prescaler);
   static void configureAPB2Prescaler(uint32_t prescaler);
