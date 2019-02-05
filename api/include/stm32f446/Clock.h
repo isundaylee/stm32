@@ -7,10 +7,15 @@ const uint32_t CLOCK_SYSCLK_HSE = RCC_CFGR_SW_HSE;
 const uint32_t CLOCK_SYSCLK_PLL = RCC_CFGR_SW_PLL;
 const uint32_t CLOCK_SYSCLK_PLLR = RCC_CFGR_SW_PLLR;
 
-const uint32_t CLOCK_MCO_SOURCE_HSI = 0b00;
-const uint32_t CLOCK_MCO_SOURCE_LSE = 0b01;
-const uint32_t CLOCK_MCO_SOURCE_HSE = 0b10;
-const uint32_t CLOCK_MCO_SOURCE_PLL = 0b11;
+const uint32_t CLOCK_MCO1_SOURCE_HSI = 0b00;
+const uint32_t CLOCK_MCO1_SOURCE_LSE = 0b01;
+const uint32_t CLOCK_MCO1_SOURCE_HSE = 0b10;
+const uint32_t CLOCK_MCO1_SOURCE_PLL = 0b11;
+
+const uint32_t CLOCK_MCO2_SOURCE_SYSCLK = 0b00;
+const uint32_t CLOCK_MCO2_SOURCE_PLLI2S = 0b01;
+const uint32_t CLOCK_MCO2_SOURCE_HSE = 0b10;
+const uint32_t CLOCK_MCO2_SOURCE_PLL = 0b11;
 
 const uint32_t CLOCK_AHB_PRESCALER_1 = 0b0000;
 const uint32_t CLOCK_AHB_PRESCALER_2 = 0b1000;
@@ -39,6 +44,7 @@ public:
 
   static void configurePLL(uint32_t pllM, uint32_t pllN);
   static void configureMCO1(uint32_t source, uint32_t prescalar);
+  static void configureMCO2(uint32_t source, uint32_t prescalar);
   static void configureAHBPrescaler(uint32_t prescaler);
   static void configureAPB1Prescaler(uint32_t prescaler);
   static void configureAPB2Prescaler(uint32_t prescaler);

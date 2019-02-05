@@ -56,6 +56,15 @@
   }
 }
 
+/* static */ void Clock::configureMCO2(uint32_t source, uint32_t prescalar) {
+  FIELD_SET(RCC->CFGR, RCC_CFGR_MCO2, source);
+  FIELD_SET(RCC->CFGR, RCC_CFGR_MCO2PRE, 0);
+
+  if (prescalar != 1) {
+    FIELD_SET(RCC->CFGR, RCC_CFGR_MCO2PRE, 4 + (prescalar - 2));
+  }
+}
+
 /* static */ void Clock::configureAHBPrescaler(uint32_t prescaler) {
   FIELD_SET(RCC->CFGR, RCC_CFGR_HPRE, prescaler);
 }

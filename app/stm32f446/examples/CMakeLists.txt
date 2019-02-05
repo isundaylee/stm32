@@ -1,3 +1,4 @@
+add_subdirectory(clock_mco2)
 add_subdirectory(gpio_blinky)
 add_subdirectory(timer_blinky)
 add_subdirectory(usart_hello)
