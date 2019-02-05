@@ -2,7 +2,7 @@ add_executable(Sandbox
     Sandbox.cpp
     )
 
-target_link_libraries(Sandbox STM32Lib)
+target_link_libraries(Sandbox STM32F446Lib)
 
 target_compile_options(Sandbox
     PRIVATE
