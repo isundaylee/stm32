@@ -19,9 +19,9 @@ void GPIO::enable() {
   BIT_SET(RCC->AHB1ENR, RCC_AHB1ENR_GPIOAEN << index);
 }
 
-void GPIO::setMode(int pin, uint32_t mode, uint32_t alternate /* = 0 */) {
+void GPIO::setMode(int pin, PinMode mode, uint32_t alternate /* = 0 */) {
   gpio_->MODER &= ~(0b11U << (2 * pin));
-  gpio_->MODER |= (mode << (2 * pin));
+  gpio_->MODER |= (static_cast<uint32_t>(mode) << (2 * pin));
   gpio_->AFR[pin / 8] &= ~(0b1111 << (4 * (pin % 8)));
   gpio_->AFR[pin / 8] |= (alternate << (4 * (pin % 8)));
 }

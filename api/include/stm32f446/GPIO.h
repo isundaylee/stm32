@@ -2,16 +2,18 @@
 
 #include <DeviceHeader.h>
 
-const uint32_t GPIO_MODE_INPUT = 0b00;
-const uint32_t GPIO_MODE_OUTPUT = 0b01;
-const uint32_t GPIO_MODE_ALTERNATE = 0b10;
-const uint32_t GPIO_MODE_ANALOG = 0b11;
-
 class GPIO {
 private:
   GPIO_TypeDef* gpio_;
 
 public:
+  enum class PinMode {
+    INPUT = 0b00,
+    OUTPUT = 0b01,
+    ALTERNATE = 0b10,
+    ANALOG = 0b11,
+  };
+
   GPIO(GPIO_TypeDef* gpio) { gpio_ = gpio; }
 
   GPIO(GPIO&& move) = delete;
@@ -21,7 +23,7 @@ public:
 
   void enable();
 
-  void setMode(int pin, uint32_t mode, uint32_t alternate = 0);
+  void setMode(int pin, PinMode mode, uint32_t alternate = 0);
 
   void set(int pin) { gpio_->BSRR = (1UL << pin); }
   void clear(int pin) { gpio_->BSRR = (1UL << (pin + 16)); }
