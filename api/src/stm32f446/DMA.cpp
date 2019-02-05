@@ -22,11 +22,11 @@ DMA_Stream_TypeDef* DMA::getStream(int streamNumber) {
   return nullptr;
 }
 
-void DMA::configureStream(int streamNumber, uint32_t channel, uint32_t dir,
-                          uint32_t n, uint32_t fifoThres, bool circular,
-                          uint32_t priority, volatile void* src,
-                          uint32_t srcSize, bool srcInc, volatile void* dst,
-                          uint32_t dstSize, bool dstInc) {
+void DMA::configureStream(int streamNumber, uint32_t channel, Direction dir,
+                          uint32_t n, FIFOThreshold fifoThres, bool circular,
+                          Priority priority, volatile void* src, Size srcSize,
+                          bool srcInc, volatile void* dst, Size dstSize,
+                          bool dstInc) {
   DMA_Stream_TypeDef* stream = getStream(streamNumber);
 
   stream->CR = 0;
@@ -34,12 +34,12 @@ void DMA::configureStream(int streamNumber, uint32_t channel, uint32_t dir,
 
   stream->NDTR = n;
 
-  FIELD_SET(stream->CR, DMA_SxCR_DIR, dir);
+  FIELD_SET(stream->CR, DMA_SxCR_DIR, static_cast<uint32_t>(dir));
   FIELD_SET(stream->CR, DMA_SxCR_CHSEL, channel);
-  FIELD_SET(stream->CR, DMA_SxCR_PL, priority);
+  FIELD_SET(stream->CR, DMA_SxCR_PL, static_cast<uint32_t>(priority));
 
-  if (fifoThres != DMA_FIFO_THRES_DIRECT) {
-    FIELD_SET(stream->FCR, DMA_SxFCR_FTH, fifoThres);
+  if (fifoThres != DMA::FIFOThreshold::DIRECT) {
+    FIELD_SET(stream->FCR, DMA_SxFCR_FTH, static_cast<uint32_t>(fifoThres));
     BIT_SET(stream->FCR, DMA_SxFCR_DMDIS);
   }
 
@@ -47,12 +47,12 @@ void DMA::configureStream(int streamNumber, uint32_t channel, uint32_t dir,
     BIT_SET(stream->CR, DMA_SxCR_CIRC);
   }
 
-  if ((dir == DMA_DIR_PERI_TO_MEM) | (dir == DMA_DIR_MEM_TO_MEM)) {
+  if ((dir == Direction::PERI_TO_MEM) | (dir == Direction::MEM_TO_MEM)) {
     stream->M0AR = reinterpret_cast<uintptr_t>(dst);
     stream->PAR = reinterpret_cast<uintptr_t>(src);
 
-    FIELD_SET(stream->CR, DMA_SxCR_PSIZE, srcSize);
-    FIELD_SET(stream->CR, DMA_SxCR_MSIZE, dstSize);
+    FIELD_SET(stream->CR, DMA_SxCR_PSIZE, static_cast<uint32_t>(srcSize));
+    FIELD_SET(stream->CR, DMA_SxCR_MSIZE, static_cast<uint32_t>(dstSize));
 
     if (srcInc) {
       BIT_SET(stream->CR, DMA_SxCR_PINC);
@@ -65,8 +65,8 @@ void DMA::configureStream(int streamNumber, uint32_t channel, uint32_t dir,
     stream->M0AR = reinterpret_cast<uintptr_t>(src);
     stream->PAR = reinterpret_cast<uintptr_t>(dst);
 
-    FIELD_SET(stream->CR, DMA_SxCR_PSIZE, dstSize);
-    FIELD_SET(stream->CR, DMA_SxCR_MSIZE, srcSize);
+    FIELD_SET(stream->CR, DMA_SxCR_PSIZE, static_cast<uint32_t>(dstSize));
+    FIELD_SET(stream->CR, DMA_SxCR_MSIZE, static_cast<uint32_t>(srcSize));
 
     if (dstInc) {
       BIT_SET(stream->CR, DMA_SxCR_PINC);

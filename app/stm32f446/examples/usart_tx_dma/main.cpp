@@ -20,9 +20,9 @@ extern "C" void main() {
 
   DMA_2.enable();
   DMA_2.configureStream(
-      7, 4, DMA_DIR_MEM_TO_PERI, sizeof(hello) / sizeof(hello[0]) - 1,
-      DMA_FIFO_THRES_DIRECT, true, DMA_PRIORITY_VERY_HIGH, hello,
-      DMA_SIZE_8_BIT, true, &USART1->DR, DMA_SIZE_8_BIT, false);
+      7, 4, DMA::Direction::MEM_TO_PERI, sizeof(hello) / sizeof(hello[0]) - 1,
+      DMA::FIFOThreshold::DIRECT, true, DMA::Priority::VERY_HIGH, hello,
+      DMA::Size::BYTE, true, &USART1->DR, DMA::Size::BYTE, false);
   DMA_2.enableStream(7);
 
   while (true) {
