@@ -47,7 +47,7 @@ void DMA::configureStream(int streamNumber, uint32_t channel, uint32_t dir,
     BIT_SET(stream->CR, DMA_SxCR_CIRC);
   }
 
-  if (dir == DMA_DIR_PERI_TO_MEM | dir == DMA_DIR_MEM_TO_MEM) {
+  if ((dir == DMA_DIR_PERI_TO_MEM) | (dir == DMA_DIR_MEM_TO_MEM)) {
     stream->M0AR = reinterpret_cast<uintptr_t>(dst);
     stream->PAR = reinterpret_cast<uintptr_t>(src);
 
