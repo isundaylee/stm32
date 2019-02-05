@@ -65,16 +65,16 @@
   }
 }
 
-/* static */ void Clock::configureAHBPrescaler(uint32_t prescaler) {
-  FIELD_SET(RCC->CFGR, RCC_CFGR_HPRE, prescaler);
+/* static */ void Clock::configureAHBPrescaler(AHBPrescaler prescaler) {
+  FIELD_SET(RCC->CFGR, RCC_CFGR_HPRE, E2I(prescaler));
 }
 
-/* static */ void Clock::configureAPB1Prescaler(uint32_t prescaler) {
-  FIELD_SET(RCC->CFGR, RCC_CFGR_PPRE1, prescaler);
+/* static */ void Clock::configureAPB1Prescaler(APBPrescaler prescaler) {
+  FIELD_SET(RCC->CFGR, RCC_CFGR_PPRE1, E2I(prescaler));
 }
 
-/* static */ void Clock::configureAPB2Prescaler(uint32_t prescaler) {
-  FIELD_SET(RCC->CFGR, RCC_CFGR_PPRE2, prescaler);
+/* static */ void Clock::configureAPB2Prescaler(APBPrescaler prescaler) {
+  FIELD_SET(RCC->CFGR, RCC_CFGR_PPRE2, E2I(prescaler));
 }
 
 /* static */ uint32_t Clock::getPLLCLKFrequency() {
@@ -96,27 +96,28 @@
 /* static */ uint32_t Clock::getAHBFrequency() {
   uint32_t ahbPrescaler = FIELD_GET(RCC->CFGR, RCC_CFGR_HPRE);
 
-  if (ahbPrescaler == CLOCK_AHB_PRESCALER_1) {
+  if (ahbPrescaler == E2I(AHBPrescaler::DIV_1)) {
     return sysclkFrequency;
   } else {
-    return (sysclkFrequency >> (ahbPrescaler - CLOCK_AHB_PRESCALER_2 + 1));
+    return (sysclkFrequency >> (ahbPrescaler - E2I(AHBPrescaler::DIV_2) + 1));
   }
 }
 
 /* static */ uint32_t Clock::getAPB1Frequency() {
   uint32_t apb1Prescaler = FIELD_GET(RCC->CFGR, RCC_CFGR_PPRE1);
 
-  if (apb1Prescaler == CLOCK_APB_PRESCALER_1) {
+  if (apb1Prescaler == E2I(APBPrescaler::DIV_1)) {
     return getAHBFrequency();
   } else {
-    return (getAHBFrequency() >> (apb1Prescaler - CLOCK_APB_PRESCALER_2 + 1));
+    return (getAHBFrequency() >>
+            (apb1Prescaler - E2I(APBPrescaler::DIV_2) + 1));
   }
 }
 
 /* static */ uint32_t Clock::getAPB1TimerFrequency() {
   uint32_t apb1Prescaler = FIELD_GET(RCC->CFGR, RCC_CFGR_PPRE1);
 
-  if (apb1Prescaler == CLOCK_APB_PRESCALER_1) {
+  if (apb1Prescaler == E2I(APBPrescaler::DIV_1)) {
     return getAPB1Frequency();
   } else {
     return getAPB1Frequency() * 2;
@@ -126,17 +127,18 @@
 /* static */ uint32_t Clock::getAPB2Frequency() {
   uint32_t apb2Prescaler = FIELD_GET(RCC->CFGR, RCC_CFGR_PPRE2);
 
-  if (apb2Prescaler == CLOCK_APB_PRESCALER_1) {
+  if (apb2Prescaler == E2I(APBPrescaler::DIV_1)) {
     return getAHBFrequency();
   } else {
-    return (getAHBFrequency() >> (apb2Prescaler - CLOCK_APB_PRESCALER_2 + 1));
+    return (getAHBFrequency() >>
+            (apb2Prescaler - E2I(APBPrescaler::DIV_2) + 1));
   }
 }
 
 /* static */ uint32_t Clock::getAPB2TimerFrequency() {
   uint32_t apb2Prescaler = FIELD_GET(RCC->CFGR, RCC_CFGR_PPRE2);
 
-  if (apb2Prescaler == CLOCK_APB_PRESCALER_1) {
+  if (apb2Prescaler == E2I(APBPrescaler::DIV_1)) {
     return getAPB2Frequency();
   } else {
     return getAPB2Frequency() * 2;
