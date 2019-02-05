@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.13)
 add_subdirectory(lib)
 
 add_library(STM32Lib STATIC
+    src/Startup.cpp
     src/Utils.cpp
     src/stm32f446/ADC.cpp
     src/stm32f446/Clock.cpp
@@ -21,6 +22,11 @@ target_include_directories(STM32Lib
     )
 
 target_link_libraries(STM32Lib CMSIS)
+
+target_compile_options(STM32Lib
+    PRIVATE
+        -ffreestanding
+    )
 
 target_compile_features(STM32Lib
     PUBLIC
