@@ -1,1 +1,2 @@
 add_subdirectory(gpio_blinky)
+add_subdirectory(timer_blinky)
