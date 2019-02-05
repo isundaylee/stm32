@@ -2,25 +2,25 @@
 
 /* static */ uint32_t Clock::sysclkFrequency = 16000000;
 
-/* static */ void Clock::switchSysclk(uint32_t systemClock) {
-  FIELD_SET(RCC->CFGR, RCC_CFGR_SW, systemClock);
-  WAIT_UNTIL(FIELD_GET(RCC->CFGR, RCC_CFGR_SWS) == systemClock);
+/* static */ void Clock::switchSysclk(SysclkSource systemClock) {
+  FIELD_SET(RCC->CFGR, RCC_CFGR_SW, E2I(systemClock));
+  WAIT_UNTIL(FIELD_GET(RCC->CFGR, RCC_CFGR_SWS) == E2I(systemClock));
 
   updateSysclkFrequency();
 }
 
 /* static */ void Clock::updateSysclkFrequency() {
   switch (FIELD_GET(RCC->CFGR, RCC_CFGR_SW)) {
-  case CLOCK_SYSCLK_HSI:
+  case E2I(SysclkSource::HSI):
     sysclkFrequency = 16000000;
     break;
-  case CLOCK_SYSCLK_HSE:
+  case E2I(SysclkSource::HSE):
     // TODO
     break;
-  case CLOCK_SYSCLK_PLL:
+  case E2I(SysclkSource::PLL):
     sysclkFrequency = getPLLCLKFrequency();
     break;
-  case CLOCK_SYSCLK_PLLR:
+  case E2I(SysclkSource::PLLR):
     // TODO
     break;
   }
@@ -31,7 +31,7 @@
 
   if (FIELD_GET(RCC->CFGR, RCC_CFGR_SWS) == RCC_CFGR_SWS_PLL) {
     wasPLL = true;
-    Clock::switchSysclk(CLOCK_SYSCLK_HSI);
+    Clock::switchSysclk(SysclkSource::HSI);
   }
 
   BIT_CLEAR(RCC->CR, RCC_CR_PLLON);
@@ -43,7 +43,7 @@
   WAIT_UNTIL(BIT_IS_SET(RCC->CR, RCC_CR_PLLRDY));
 
   if (wasPLL) {
-    Clock::switchSysclk(CLOCK_SYSCLK_PLL);
+    Clock::switchSysclk(SysclkSource::PLL);
   }
 }
 

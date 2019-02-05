@@ -2,11 +2,6 @@
 
 #include <DeviceHeader.h>
 
-const uint32_t CLOCK_SYSCLK_HSI = RCC_CFGR_SW_HSI;
-const uint32_t CLOCK_SYSCLK_HSE = RCC_CFGR_SW_HSE;
-const uint32_t CLOCK_SYSCLK_PLL = RCC_CFGR_SW_PLL;
-const uint32_t CLOCK_SYSCLK_PLLR = RCC_CFGR_SW_PLLR;
-
 const uint32_t CLOCK_MCO1_SOURCE_HSI = 0b00;
 const uint32_t CLOCK_MCO1_SOURCE_LSE = 0b01;
 const uint32_t CLOCK_MCO1_SOURCE_HSE = 0b10;
@@ -38,9 +33,16 @@ private:
   static void updateSysclkFrequency();
 
 public:
+  enum class SysclkSource {
+    HSI = RCC_CFGR_SW_HSI,
+    HSE = RCC_CFGR_SW_HSE,
+    PLL = RCC_CFGR_SW_PLL,
+    PLLR = RCC_CFGR_SW_PLLR,
+  };
+
   static uint32_t sysclkFrequency;
 
-  static void switchSysclk(uint32_t systemClock);
+  static void switchSysclk(SysclkSource systemClock);
 
   static void configurePLL(uint32_t pllM, uint32_t pllN);
   static void configureMCO1(uint32_t source, uint32_t prescalar);

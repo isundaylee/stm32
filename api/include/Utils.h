@@ -28,6 +28,8 @@ typedef void (*InterruptHandler)(void);
 
 #define FORCE_READ(reg) ((void)reg)
 
+#define E2I(e) (static_cast<uint32_t>(e))
+
 #if 1
 
 const char* HexString(uint32_t n);
