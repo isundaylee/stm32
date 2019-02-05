@@ -1,5 +1,0 @@
-r
-loadbin stm32f446_examples_gpio_blinky.bin 0x08000000
-r
-g
-exit

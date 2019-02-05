@@ -1,0 +1,5 @@
+r
+loadbin ${ARG_APP_NAME}.bin 0x08000000
+r
+g
+exit
