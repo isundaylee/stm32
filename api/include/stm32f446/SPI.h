@@ -42,9 +42,11 @@ public:
 
   void enableMaster(ClockPolarity cpol, ClockPhase cpha, DataFrameFormat dff,
                     BaudRate baud, NSSMode nssMode);
+  void enable();
   void disable();
 
   bool transmit(uint16_t const* data, size_t len);
+  bool transact(uint16_t* data, size_t len);
 };
 
 extern SPI SPI_1;
