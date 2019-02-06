@@ -1,6 +1,7 @@
 add_subdirectory(clock_mco2)
 add_subdirectory(clock_sysclk_source)
 add_subdirectory(gpio_blinky)
+add_subdirectory(spi_matrix_led)
 add_subdirectory(timer_blinky)
 add_subdirectory(usart_hello)
 add_subdirectory(usart_tx_dma)
