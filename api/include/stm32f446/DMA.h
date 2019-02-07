@@ -2,11 +2,43 @@
 
 #include <DeviceHeader.h>
 
+extern "C" void isrDMA1Stream0();
+extern "C" void isrDMA1Stream1();
+extern "C" void isrDMA1Stream2();
+extern "C" void isrDMA1Stream3();
+extern "C" void isrDMA1Stream4();
+extern "C" void isrDMA1Stream5();
+extern "C" void isrDMA1Stream6();
+extern "C" void isrDMA1Stream7();
+extern "C" void isrDMA2Stream0();
+extern "C" void isrDMA2Stream1();
+extern "C" void isrDMA2Stream2();
+extern "C" void isrDMA2Stream3();
+extern "C" void isrDMA2Stream4();
+extern "C" void isrDMA2Stream5();
+extern "C" void isrDMA2Stream6();
+extern "C" void isrDMA2Stream7();
+
 class DMA {
+public:
+  enum class StreamEventType {
+    TRANSFER_COMPLETE,
+  };
+
+  struct StreamEvent {
+    StreamEventType type;
+  };
+
+  using StreamEventHandler = void (*)(StreamEvent event);
+
 private:
   DMA_TypeDef* dma_;
 
+  StreamEventHandler streamEventHandlers_[8];
+
   DMA_Stream_TypeDef* getStream(int streamNumber);
+
+  void handleInterrupt(int streamNumber);
 
 public:
   enum class Direction {
@@ -44,8 +76,25 @@ public:
                        uint32_t n, FIFOThreshold fifoThres, bool circular,
                        Priority priority, volatile void* src, Size srcSize,
                        bool srcInc, volatile void* dst, Size dstSize,
-                       bool dstInc);
+                       bool dstInc, StreamEventHandler eventHandler);
   void enableStream(int streamNumber);
+
+  friend void isrDMA1Stream0();
+  friend void isrDMA1Stream1();
+  friend void isrDMA1Stream2();
+  friend void isrDMA1Stream3();
+  friend void isrDMA1Stream4();
+  friend void isrDMA1Stream5();
+  friend void isrDMA1Stream6();
+  friend void isrDMA1Stream7();
+  friend void isrDMA2Stream0();
+  friend void isrDMA2Stream1();
+  friend void isrDMA2Stream2();
+  friend void isrDMA2Stream3();
+  friend void isrDMA2Stream4();
+  friend void isrDMA2Stream5();
+  friend void isrDMA2Stream6();
+  friend void isrDMA2Stream7();
 };
 
 extern DMA DMA_1;
