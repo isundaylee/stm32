@@ -14,6 +14,7 @@ typedef void (*InterruptHandler)(void);
 #define BIT_SET(reg, bit) (reg |= (bit))
 #define BIT_CLEAR(reg, bit) (reg &= ~(bit))
 #define BIT_IS_SET(reg, field) ((reg & (field)) != 0)
+#define BIT_IS_CLEAR(reg, field) ((reg & (field)) == 0)
 
 #define WAIT_UNTIL(condition)                                                  \
   do {                                                                         \

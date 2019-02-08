@@ -7,8 +7,8 @@ SPI SPI_2(SPI2);
 SPI SPI_3(SPI3);
 SPI SPI_4(SPI4);
 
-void SPI::enableMaster(ClockPolarity cpol, ClockPhase cpha, DataFrameFormat dff,
-                       BaudRate baud, NSSMode nssMode) {
+void SPI::configureMaster(ClockPolarity cpol, ClockPhase cpha,
+                          DataFrameFormat dff, BaudRate baud, NSSMode nssMode) {
   if (spi_ == SPI1) {
     BIT_SET(RCC->APB2ENR, RCC_APB2ENR_SPI1EN);
   } else if (spi_ == SPI2) {
@@ -88,4 +88,14 @@ bool SPI::transact(uint16_t* data, size_t len) {
   WAIT_UNTIL(!BIT_IS_SET(spi_->SR, SPI_SR_BSY));
 
   return true;
+}
+
+void SPI::enableTxDMA() { BIT_SET(spi_->CR2, SPI_CR2_TXDMAEN); }
+void SPI::disableTxDMA() { BIT_CLEAR(spi_->CR2, SPI_CR2_TXDMAEN); }
+void SPI::enableRxDMA() { BIT_SET(spi_->CR2, SPI_CR2_RXDMAEN); }
+void SPI::disableRxDMA() { BIT_CLEAR(spi_->CR2, SPI_CR2_RXDMAEN); }
+
+void SPI::waitUntilNotBusy() {
+  WAIT_UNTIL(BIT_IS_SET(spi_->SR, SPI_SR_TXE));
+  WAIT_UNTIL(BIT_IS_CLEAR(spi_->SR, SPI_SR_BSY));
 }

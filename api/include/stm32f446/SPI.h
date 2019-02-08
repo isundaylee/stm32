@@ -40,10 +40,17 @@ public:
 
   SPI(SPI_TypeDef* spi) : spi_(spi) {}
 
-  void enableMaster(ClockPolarity cpol, ClockPhase cpha, DataFrameFormat dff,
-                    BaudRate baud, NSSMode nssMode);
+  void configureMaster(ClockPolarity cpol, ClockPhase cpha, DataFrameFormat dff,
+                       BaudRate baud, NSSMode nssMode);
   void enable();
   void disable();
+
+  void enableTxDMA();
+  void disableTxDMA();
+  void enableRxDMA();
+  void disableRxDMA();
+
+  void waitUntilNotBusy();
 
   bool transmit(uint16_t const* data, size_t len);
   bool transact(uint16_t* data, size_t len);

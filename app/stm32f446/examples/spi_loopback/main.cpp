@@ -33,10 +33,11 @@ extern "C" void main() {
   GPIO_B.setMode(13, GPIO::PinMode::ALTERNATE, 5); // SCK
   GPIO_B.setMode(14, GPIO::PinMode::ALTERNATE, 5); // MISO
   GPIO_B.setMode(15, GPIO::PinMode::ALTERNATE, 5); // MOSI
-  SPI_2.enableMaster(SPI::ClockPolarity::IDLE_HIGH,
-                     SPI::ClockPhase::SAMPLE_ON_SECOND_EDGE,
-                     SPI::DataFrameFormat::BYTE, SPI::BaudRate::PCLK_OVER_8,
-                     SPI::NSSMode::MANUAL);
+  SPI_2.configureMaster(SPI::ClockPolarity::IDLE_HIGH,
+                        SPI::ClockPhase::SAMPLE_ON_SECOND_EDGE,
+                        SPI::DataFrameFormat::BYTE, SPI::BaudRate::PCLK_OVER_8,
+                        SPI::NSSMode::MANUAL);
+  SPI_2.enable();
 
   USART_1.write("Hello, SPI loopback testing!\r\n");
 
