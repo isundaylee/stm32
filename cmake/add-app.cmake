@@ -73,6 +73,7 @@ function(add_app)
         configure_file(${ADD_APP_ASSET_DIR}/gdb.sh.in gdb.sh)
         add_custom_target(gdb_${ARG_APP_NAME}
             COMMAND ./gdb.sh
+            USES_TERMINAL
             )
     else()
         message(FATAL_ERROR "Unknown device ${ARG_DEVICE_NAME}")
