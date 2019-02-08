@@ -50,19 +50,29 @@ function(add_app)
         )
 
     if(${ARG_DEVICE_NAME} STREQUAL "STM32F446")
+        set(JLINK_CONNECT_OPTIONS
+            "-device" "STM32F446RE"
+            "-if" "JTAG"
+            "-speed" "4000"
+            "-jtagconf" "-1,-1"
+            "-autoconnect" "1"
+            )
+        string(REPLACE ";" " " JLINK_CONNECT_OPTIONS_STR
+            "${JLINK_CONNECT_OPTIONS}")
+
         # Adds flash target
         configure_file(${ADD_APP_ASSET_DIR}/Flash.jlink.in Flash.jlink)
         add_custom_target(flash_${ARG_APP_NAME}
-            COMMAND JLinkExe -device STM32F446RE -if JTAG -speed 4000 -jtagconf
-                -1,-1 -autoconnect 1
+            COMMAND JLinkExe ${JLINK_CONNECT_OPTIONS}
                 -CommanderScript Flash.jlink
             DEPENDS ${ARG_APP_NAME}.bin
             )
 
         # Adds GDB target
         configure_file(${ADD_APP_ASSET_DIR}/gdbinit.in .gdbinit)
+        configure_file(${ADD_APP_ASSET_DIR}/gdb.sh.in gdb.sh)
         add_custom_target(gdb_${ARG_APP_NAME}
-            COMMAND ${CMAKE_GDB}
+            COMMAND ./gdb.sh
             )
     else()
         message(FATAL_ERROR "Unknown device ${ARG_DEVICE_NAME}")

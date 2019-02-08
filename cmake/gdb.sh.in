@@ -1,0 +1,8 @@
+#!/bin/bash
+
+JLinkGDBServer ${JLINK_CONNECT_OPTIONS_STR} &
+gdb_server_pid=$!
+
+${CMAKE_GDB}
+
+kill $gdb_server_pid
