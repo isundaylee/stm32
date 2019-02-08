@@ -70,9 +70,9 @@ extern "C" void main() {
 
   while (true) {
     // Generates data
-    // for (size_t i = 0; i < TRANSACTION_SIZE; i++) {
-    //   txData[i] = poorMansRand();
-    // }
+    for (size_t i = 0; i < TRANSACTION_SIZE; i++) {
+      txData[i] = poorMansRand();
+    }
 
     // Start SPI transaction
     spiTransactionDone = false;
