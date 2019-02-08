@@ -32,10 +32,11 @@ extern "C" void main() {
   GPIO_B.setMode(12, GPIO::PinMode::OUTPUT); // NSS / LOAD
   GPIO_B.set(12);
 
-  SPI_2.enableMaster(SPI::ClockPolarity::IDLE_HIGH,
-                     SPI::ClockPhase::SAMPLE_ON_SECOND_EDGE,
-                     SPI::DataFrameFormat::HALFWORD,
-                     SPI::BaudRate::PCLK_OVER_32, SPI::NSSMode::MANUAL);
+  SPI_2.configureMaster(SPI::ClockPolarity::IDLE_HIGH,
+                        SPI::ClockPhase::SAMPLE_ON_SECOND_EDGE,
+                        SPI::DataFrameFormat::HALFWORD,
+                        SPI::BaudRate::PCLK_OVER_32, SPI::NSSMode::MANUAL);
+  SPI_2.enable();
 
   sendCommand(0x0C, 0x01); // Shutdown mode off
   sendCommand(0x0A, 0x00); // Intensity
