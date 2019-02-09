@@ -1,6 +1,7 @@
 #!/bin/bash
 
-JLinkGDBServer ${JLINK_CONNECT_OPTIONS_STR} &
+setsid JLinkGDBServer ${JLINK_CONNECT_OPTIONS_STR} \
+  >/tmp/stm32_jlink_gdb_server.log 2>&1 &
 gdb_server_pid=$!
 
 ${CMAKE_GDB}
