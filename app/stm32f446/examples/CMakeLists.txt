@@ -1,6 +1,7 @@
 add_subdirectory(clock_mco2)
 add_subdirectory(clock_sysclk_source)
 add_subdirectory(gpio_blinky)
+add_subdirectory(spi_enc28j60)
 add_subdirectory(spi_loopback)
 add_subdirectory(spi_loopback_dma)
 add_subdirectory(spi_matrix_led)
