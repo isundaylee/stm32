@@ -13,6 +13,14 @@ uint8_t generateHeaderByte(Opcode opcode, ControlRegAddress addr) {
 }
 
 void selectControlRegBank(ControlRegBank bank) {
+  static auto currentBank = ControlRegBank::BANK_0;
+
+  if (currentBank == bank) {
+    return;
+  } else {
+    currentBank = bank;
+  }
+
   uint16_t data[] = {
       generateHeaderByte(Opcode::BIT_FIELD_CLEAR, ControlRegAddress::ECON1),
       0b00000011};
