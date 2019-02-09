@@ -122,7 +122,9 @@ enum class ControlRegAddress {
   // Reserved
   EFLOCON = 0x17,
   EPAUSL,
-  EPAUSH
+  EPAUSH,
+
+  READ_BUFFER_MEMORY = 0x1A,
 };
 
 enum class PHYRegAddress {
@@ -146,6 +148,20 @@ enum class Opcode {
   BIT_FIELD_CLEAR = 0b101,
   SYSTEM_RESET_COMMAND = 0b111,
 };
+
+const uint8_t ECON1_TXRST = 0b10000000;
+const uint8_t ECON1_RXRST = 0b01000000;
+const uint8_t ECON1_DMAST = 0b00100000;
+const uint8_t ECON1_CSUMEN = 0b00010000;
+const uint8_t ECON1_TXRTS = 0b00001000;
+const uint8_t ECON1_RXEN = 0b00000100;
+const uint8_t ECON1_BSEL1 = 0b00000010;
+const uint8_t ECON1_BSEL0 = 0b00000001;
+
+const uint8_t ECON2_AUTOINC = 0b10000000;
+const uint8_t ECON2_PKTDEC = 0b01000000;
+const uint8_t ECON2_PWRSV = 0b00100000;
+const uint8_t ECON2_VRPS = 0b00001000;
 
 const uint8_t MACON1_TXPAUS = 0b00001000;
 const uint8_t MACON1_RXPAUS = 0b00000100;

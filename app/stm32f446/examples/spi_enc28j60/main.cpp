@@ -6,6 +6,8 @@
 
 #include "ENC28J60.h"
 
+#define DUMP_PACKET_HEADERS 0
+
 uint8_t generateHeaderByte(Opcode opcode, ControlRegAddress addr) {
   return (static_cast<uint8_t>(opcode) << 5) + static_cast<uint8_t>(addr);
 }
@@ -21,6 +23,28 @@ void selectControlRegBank(ControlRegBank bank) {
 
   data[0] = generateHeaderByte(Opcode::BIT_FIELD_SET, ControlRegAddress::ECON1);
   data[1] = static_cast<uint8_t>(bank);
+
+  GPIO_B.clear(12);
+  SPI_2.transact(data, sizeof(data) / sizeof(data[0]));
+  GPIO_B.set(12);
+}
+
+void setETHRegBitField(ControlRegBank bank, ControlRegAddress addr,
+                       uint8_t bits) {
+  selectControlRegBank(bank);
+
+  uint16_t data[] = {generateHeaderByte(Opcode::BIT_FIELD_SET, addr), bits};
+
+  GPIO_B.clear(12);
+  SPI_2.transact(data, sizeof(data) / sizeof(data[0]));
+  GPIO_B.set(12);
+}
+
+void clearETHRegBitField(ControlRegBank bank, ControlRegAddress addr,
+                         uint8_t bits) {
+  selectControlRegBank(bank);
+
+  uint16_t data[] = {generateHeaderByte(Opcode::BIT_FIELD_CLEAR, addr), bits};
 
   GPIO_B.clear(12);
   SPI_2.transact(data, sizeof(data) / sizeof(data[0]));
@@ -72,6 +96,8 @@ static void initializeETH() {
   writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXSTH, 0x00);
   writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXNDL, 0xFF);
   writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXNDH, 0x0F);
+  writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERDPTL, 0x00);
+  writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERDPTH, 0x00);
   writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXRDPTL, 0x00);
   writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXRDPTH, 0x00);
 
@@ -153,6 +179,16 @@ void printPHYReg(PHYRegAddress addr, char const* name) {
   USART_1.write("\r\n");
 }
 
+void readBufferMemory(uint16_t* data, size_t len) {
+  uint16_t header[] = {generateHeaderByte(
+      Opcode::READ_BUFFER_MEMORY, ControlRegAddress::READ_BUFFER_MEMORY)};
+
+  GPIO_B.clear(12);
+  SPI_2.transact(header, sizeof(header) / sizeof(header[0]));
+  SPI_2.transact(data, len);
+  GPIO_B.set(12);
+}
+
 static void initializePHY() {
   writePHYReg(PHYRegAddress::PHCON1, PHCON1_PDPXMD);
 }
@@ -169,6 +205,53 @@ static void initialize() {
   }
   USART_1.write("\r\n");
   USART_1.write("Link is up!\r\n");
+
+  setETHRegBitField(ControlRegBank::BANK_0, ControlRegAddress::ECON1,
+                    ECON1_RXEN);
+
+  while (true) {
+    if (readETHReg(ControlRegBank::BANK_1, ControlRegAddress::EPKTCNT) != 0) {
+      GPIO_C.clear(7);
+
+      uint16_t header[6];
+      readBufferMemory(header, 6);
+
+      uint8_t nextPacketPointerLow = static_cast<uint8_t>(header[0]);
+      uint8_t nextPacketPointerHigh = static_cast<uint8_t>(header[1]);
+      size_t frameLen = header[2] + (header[3] << 8);
+
+      static uint16_t data[1536];
+      readBufferMemory(data, frameLen + (frameLen % 2));
+
+#if DUMP_PACKET_HEADERS
+      USART_1.write("[");
+      for (size_t i = 0; i < 6; i++) {
+        USART_1.write(HexString(header[i]));
+        if (i != 5) {
+          USART_1.write(" ");
+        }
+      }
+      USART_1.write("]");
+
+      for (size_t i = 0; i < 12; i++) {
+        USART_1.write(" ");
+        USART_1.write(HexString(data[i]));
+      }
+      USART_1.write("\r\n");
+#endif
+
+      writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXRDPTL,
+                      nextPacketPointerLow);
+      writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXRDPTH,
+                      nextPacketPointerHigh);
+      setETHRegBitField(ControlRegBank::BANK_0, ControlRegAddress::ECON2,
+                        ECON2_PKTDEC);
+
+      GPIO_C.set(7);
+    }
+
+    DELAY(1000);
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -194,6 +277,10 @@ extern "C" void main() {
                         SPI::DataFrameFormat::BYTE, SPI::BaudRate::PCLK_OVER_4,
                         SPI::NSSMode::MANUAL);
   SPI_2.enable();
+
+  GPIO_C.enable();
+  GPIO_C.setMode(7, GPIO::PinMode::OUTPUT);
+  GPIO_C.set(7);
 
   USART_1.write("Hello, SPI ENC28J60!\r\n");
 
