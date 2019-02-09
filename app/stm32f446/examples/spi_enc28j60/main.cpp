@@ -234,7 +234,7 @@ static void initialize() {
 #if DUMP_PACKET_HEADERS
       USART_1.write("[");
       for (size_t i = 0; i < 6; i++) {
-        USART_1.write(HexString(header[i]));
+        USART_1.write(HexString(header[i], 2));
         if (i != 5) {
           USART_1.write(" ");
         }
@@ -243,7 +243,7 @@ static void initialize() {
 
       for (size_t i = 0; i < 12; i++) {
         USART_1.write(" ");
-        USART_1.write(HexString(data[i]));
+        USART_1.write(HexString(data[i], 2));
       }
       USART_1.write("\r\n");
 #endif

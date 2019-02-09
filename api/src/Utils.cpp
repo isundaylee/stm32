@@ -2,10 +2,11 @@
 
 #if 1
 
-const char *HexString(uint32_t n) {
+const char* HexString(uint32_t n, size_t len /*=0*/) {
   static char buffer[11];
+  static char* const bufferEnd = &buffer[sizeof(buffer) / sizeof(buffer[0])];
 
-  char *p = &buffer[sizeof(buffer) / sizeof(buffer[0]) - 1];
+  char* p = bufferEnd - 1;
 
   *(p--) = '\0';
 
@@ -22,16 +23,23 @@ const char *HexString(uint32_t n) {
     *(p--) = '0';
   }
 
+  if (len != 0) {
+    while (static_cast<size_t>(bufferEnd - p) < (len + 2)) {
+      *(p--) = '0';
+    }
+  }
+
   *(p--) = 'x';
   *(p--) = '0';
 
   return (p + 1);
 }
 
-const char *DecString(uint32_t n) {
+const char* DecString(uint32_t n, size_t len /* = 0 */) {
   static char buffer[20];
+  static char* const bufferEnd = &buffer[sizeof(buffer) / sizeof(buffer[0])];
 
-  char *p = &buffer[sizeof(buffer) / sizeof(buffer[0]) - 1];
+  char* p = bufferEnd - 1;
 
   *(p--) = '\0';
 
@@ -42,6 +50,12 @@ const char *DecString(uint32_t n) {
     }
   } else {
     *(p--) = '0';
+  }
+
+  if (len != 0) {
+    while (static_cast<size_t>(bufferEnd - p) < (len + 2)) {
+      *(p--) = '0';
+    }
   }
 
   return (p + 1);

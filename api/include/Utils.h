@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <stdlib.h>
 
 typedef void (*InterruptHandler)(void);
 
@@ -33,7 +34,7 @@ typedef void (*InterruptHandler)(void);
 
 #if 1
 
-const char* HexString(uint32_t n);
-const char* DecString(uint32_t n);
+const char* HexString(uint32_t n, size_t len = 0);
+const char* DecString(uint32_t n, size_t len = 0);
 
 #endif
