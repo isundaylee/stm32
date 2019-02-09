@@ -5,9 +5,22 @@
 #include <SPI.h>
 #include <USART.h>
 
-const size_t TRANSACTION_SIZE = 16;
+#include <RingBuffer.h>
 
-static bool spiTransactionDone = false;
+const size_t TRANSACTION_SIZE = 16;
+const size_t EVENT_BUFFER_SIZE = 16;
+
+enum class EventType {
+  TX_DMA_DONE,
+};
+
+struct Event {
+  EventType type;
+
+  void operator=(Event const volatile& copy) volatile { type = copy.type; }
+};
+
+volatile RingBuffer<Event, EVENT_BUFFER_SIZE> events;
 
 uint8_t txData[TRANSACTION_SIZE];
 uint8_t rxData[TRANSACTION_SIZE];
@@ -24,16 +37,12 @@ uint8_t poorMansRand() {
 void handleTxDMAEvent(DMA::StreamEvent event) {
   switch (event.type) {
   case DMA::StreamEventType::TRANSFER_COMPLETE:
-    spiTransactionDone = true;
+    events.push(Event{EventType::TX_DMA_DONE});
     return;
   }
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// Main!
-////////////////////////////////////////////////////////////////////////////////
-
-extern "C" void main() {
+static void initialize() {
   // Sets up USART 1
   GPIO_A.enable();
   GPIO_A.setMode(9, GPIO::PinMode::ALTERNATE, 7);  // TX
@@ -65,57 +74,87 @@ extern "C" void main() {
                         DMA::Priority::VERY_HIGH, &SPI2->DR, DMA::Size::BYTE,
                         false, rxData, DMA::Size::BYTE, true, nullptr);
   SPI_2.enable();
+}
 
-  USART_1.write("Hello, SPI loopback DMA testing!\r\n");
+void startSPITransaction() {
+  // Generates data
+  for (size_t i = 0; i < TRANSACTION_SIZE; i++) {
+    txData[i] = poorMansRand();
+  }
 
-  while (true) {
-    // Generates data
-    for (size_t i = 0; i < TRANSACTION_SIZE; i++) {
-      txData[i] = poorMansRand();
-    }
+  // Start SPI transaction
+  GPIO_B.clear(12);
+  DMA_1.enableStream(3);
+  DMA_1.enableStream(4);
+}
 
-    // Start SPI transaction
-    spiTransactionDone = false;
-    GPIO_B.clear(12);
-    DMA_1.enableStream(3);
-    DMA_1.enableStream(4);
+bool checkSPITransactionResult() {
+  // Check loopback correctness
+  bool correct = true;
 
-    // Wait for transaction to finish and clean up
-    WAIT_UNTIL(spiTransactionDone);
-    GPIO_B.set(12);
-
-    // Check loopback correctness
-    bool correct = true;
-
-    for (size_t i = 0; i < TRANSACTION_SIZE; i++) {
-      if (txData[i] != rxData[i]) {
-        USART_1.write(HexString(i));
-        USART_1.write(" ");
-        USART_1.write(HexString(txData[i]));
-        USART_1.write(" ");
-        USART_1.write(HexString(rxData[i]));
-        USART_1.write(" ");
-        correct = false;
-        break;
-      }
-    }
-
-    if (correct) {
-      USART_1.write(".");
-    } else {
-      USART_1.write("X");
-      break;
-    }
-
-    // Check OVR flag
-    if (BIT_IS_CLEAR(SPI2->SR, SPI_SR_OVR)) {
-      USART_1.write(".");
-    } else {
-      USART_1.write("O");
+  for (size_t i = 0; i < TRANSACTION_SIZE; i++) {
+    if (txData[i] != rxData[i]) {
+      USART_1.write(HexString(i));
+      USART_1.write(" ");
+      USART_1.write(HexString(txData[i]));
+      USART_1.write(" ");
+      USART_1.write(HexString(rxData[i]));
+      USART_1.write(" ");
+      correct = false;
       break;
     }
   }
 
+  if (correct) {
+    USART_1.write(".");
+  } else {
+    USART_1.write("X");
+    return false;
+  }
+
+  // Check OVR flag
+  if (BIT_IS_CLEAR(SPI2->SR, SPI_SR_OVR)) {
+    USART_1.write(".");
+  } else {
+    USART_1.write("O");
+    return false;
+  }
+
+  return true;
+}
+
+void processEvents() {
+  while (!events.empty()) {
+    Event event;
+    events.pop(event);
+
+    switch (event.type) {
+    case EventType::TX_DMA_DONE: {
+      SPI_2.waitUntilNotBusy();
+      GPIO_B.set(12);
+
+      if (checkSPITransactionResult()) {
+        startSPITransaction();
+      }
+
+      break;
+    }
+    }
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Main!
+////////////////////////////////////////////////////////////////////////////////
+
+extern "C" void main() {
+  initialize();
+
+  USART_1.write("Hello, SPI loopback DMA testing!\r\n");
+
+  startSPITransaction();
+
   while (true) {
+    processEvents();
   }
 }
