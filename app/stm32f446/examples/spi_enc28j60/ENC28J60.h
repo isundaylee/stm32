@@ -163,6 +163,14 @@ const uint8_t ECON2_PKTDEC = 0b01000000;
 const uint8_t ECON2_PWRSV = 0b00100000;
 const uint8_t ECON2_VRPS = 0b00001000;
 
+const uint8_t EIE_INTIE = 0b10000000;
+const uint8_t EIE_PKTIE = 0b01000000;
+const uint8_t EIE_DMAIE = 0b00100000;
+const uint8_t EIE_LINKIE = 0b00010000;
+const uint8_t EIE_TXIE = 0b00001000;
+const uint8_t EIE_TXERIE = 0b00000010;
+const uint8_t EIE_RXERIE = 0b00000001;
+
 const uint8_t MACON1_TXPAUS = 0b00001000;
 const uint8_t MACON1_RXPAUS = 0b00000100;
 const uint8_t MACON1_PASSALL = 0b00000010;

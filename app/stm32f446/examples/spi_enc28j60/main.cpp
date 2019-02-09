@@ -216,6 +216,8 @@ static void initialize() {
 
   setETHRegBitField(ControlRegBank::BANK_0, ControlRegAddress::ECON1,
                     ECON1_RXEN);
+  setETHRegBitField(ControlRegBank::BANK_0, ControlRegAddress::EIE,
+                    EIE_INTIE | EIE_PKTIE);
 
   while (true) {
     if (readETHReg(ControlRegBank::BANK_1, ControlRegAddress::EPKTCNT) != 0) {
