@@ -8,8 +8,11 @@ execute_process(
     OUTPUT_VARIABLE BINUTILS_PATH
     OUTPUT_STRIP_TRAILING_WHITESPACE
     )
+    
+get_filename_component(ARM_TOOLCHAIN_DIR ${BINUTILS_PATH} REALPATH)
+set(ARM_TOOLCHAIN_DIR ${ARM_TOOLCHAIN_DIR}/../..)
+get_filename_component(ARM_TOOLCHAIN_DIR ${ARM_TOOLCHAIN_DIR} ABSOLUTE)
 
-get_filename_component(ARM_TOOLCHAIN_DIR ${BINUTILS_PATH} DIRECTORY)
 # Without that flag CMake is not able to pass test compilation check
 set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 
@@ -40,4 +43,13 @@ add_compile_options(
     -Wextra
     -Wold-style-cast
     -Werror
+    )
+  
+include_directories(SYSTEM
+    ${ARM_TOOLCHAIN_DIR}/arm-none-eabi/include/c++/7.3.1
+    ${ARM_TOOLCHAIN_DIR}/arm-none-eabi/include/c++/7.3.1/arm-none-eabi
+    ${ARM_TOOLCHAIN_DIR}/arm-none-eabi/include/c++/7.3.1/backward
+    ${ARM_TOOLCHAIN_DIR}/lib/gcc/arm-none-eabi/7.3.1/include
+    ${ARM_TOOLCHAIN_DIR}/lib/gcc/arm-none-eabi/7.3.1/include-fixed
+    ${ARM_TOOLCHAIN_DIR}/arm-none-eabi/include
     )
