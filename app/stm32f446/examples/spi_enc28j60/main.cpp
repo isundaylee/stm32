@@ -1,5 +1,6 @@
 #include <Utils.h>
 
+#include <DMA.h>
 #include <GPIO.h>
 #include <SPI.h>
 #include <USART.h>
@@ -13,16 +14,24 @@
 
 enum class Event {
   ETHERNET_INTERRUPT,
+  RX_DMA_COMPLETE,
 };
 
 enum class State {
   IDLE,
-  RX,
+  RX_HEADER,
+  RX_FRAME_PENDING,
+  RX_FRAME_DONE,
 };
 
-RingBuffer<Event, 16> events;
+static RingBuffer<Event, 16> events;
 
-auto state = State::IDLE;
+static auto state = State::IDLE;
+
+static uint16_t packetHeader[6];
+static uint8_t frameData[1536];
+static uint8_t nextPacketPointerLow;
+static uint8_t nextPacketPointerHigh;
 
 uint8_t generateHeaderByte(Opcode opcode, ControlRegAddress addr) {
   return (static_cast<uint8_t>(opcode) << 5) + static_cast<uint8_t>(addr);
@@ -203,18 +212,32 @@ void printPHYReg(PHYRegAddress addr, char const* name) {
   USART_1.write("\r\n");
 }
 
-void readBufferMemory(uint16_t* data, size_t len) {
+void readBufferMemoryStart() {
   uint16_t header[] = {generateHeaderByte(
       Opcode::READ_BUFFER_MEMORY, ControlRegAddress::READ_BUFFER_MEMORY)};
 
   GPIO_B.clear(12);
   SPI_2.transact(header, sizeof(header) / sizeof(header[0]));
+}
+
+void readBufferMemoryEnd() { GPIO_B.set(12); }
+
+void readBufferMemory(uint16_t* data, size_t len) {
+  readBufferMemoryStart();
   SPI_2.transact(data, len);
-  GPIO_B.set(12);
+  readBufferMemoryEnd();
 }
 
 static void initializePHY() {
   writePHYReg(PHYRegAddress::PHCON1, PHCON1_PDPXMD);
+}
+
+static void handleRxDMAEvent(DMA::StreamEvent event) {
+  switch (event.type) {
+  case DMA::StreamEventType::TRANSFER_COMPLETE:
+    events.push(Event::RX_DMA_COMPLETE);
+    break;
+  }
 }
 
 static bool receiveOnePacket() {
@@ -222,36 +245,36 @@ static bool receiveOnePacket() {
     return false;
   }
 
-  uint16_t header[6];
-  readBufferMemory(header, 6);
+  readBufferMemory(packetHeader, 6);
 
-  uint8_t nextPacketPointerLow = static_cast<uint8_t>(header[0]);
-  uint8_t nextPacketPointerHigh = static_cast<uint8_t>(header[1]);
-  size_t frameLen = header[2] + (header[3] << 8);
+  nextPacketPointerLow = static_cast<uint8_t>(packetHeader[0]);
+  nextPacketPointerHigh = static_cast<uint8_t>(packetHeader[1]);
+  size_t frameLen = packetHeader[2] + (packetHeader[3] << 8);
 
-  static uint16_t data[1536];
-  readBufferMemory(data, frameLen + (frameLen % 2));
+  size_t transactionSize = frameLen + (frameLen % 2);
 
-#if DUMP_PACKET_HEADERS
-  USART_1.write("[");
-  for (size_t i = 0; i < 6; i++) {
-    USART_1.write(HexString(header[i], 2));
-    if (i != 5) {
-      USART_1.write(" ");
-    }
-  }
-  USART_1.write("]");
+  readBufferMemoryStart();
+  SPI_2.enableTxDMA();
+  SPI_2.enableRxDMA();
+  DMA_1.configureStream(4, 0, DMA::Direction::MEM_TO_PERI, transactionSize,
+                        DMA::FIFOThreshold::DIRECT, false,
+                        DMA::Priority::VERY_HIGH, frameData, DMA::Size::BYTE,
+                        true, &SPI2->DR, DMA::Size::BYTE, false, nullptr);
+  DMA_1.configureStream(3, 0, DMA::Direction::PERI_TO_MEM, transactionSize,
+                        DMA::FIFOThreshold::DIRECT, false,
+                        DMA::Priority::VERY_HIGH, &SPI2->DR, DMA::Size::BYTE,
+                        false, frameData, DMA::Size::BYTE, true,
+                        handleRxDMAEvent);
+  DMA_1.enableStream(3);
+  DMA_1.enableStream(4);
 
-  for (size_t i = 0; i < 12; i++) {
-    USART_1.write(" ");
-    USART_1.write(HexString(data[i], 2));
-  }
-  USART_1.write("\r\n");
-#endif
+  return true;
+}
 
-#if PRINT_PACKET_INDICATOR
-  USART_1.write(".");
-#endif
+static void packetRxCleanup() {
+  readBufferMemoryEnd();
+  SPI_2.disableRxDMA();
+  SPI_2.disableTxDMA();
 
   writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXRDPTL,
                   nextPacketPointerLow);
@@ -260,7 +283,26 @@ static bool receiveOnePacket() {
   setETHRegBitField(ControlRegBank::BANK_0, ControlRegAddress::ECON2,
                     ECON2_PKTDEC);
 
-  return true;
+#if DUMP_PACKET_HEADERS
+  USART_1.write("[");
+  for (size_t i = 0; i < 6; i++) {
+    USART_1.write(HexString(packetHeader[i], 2));
+    if (i != 5) {
+      USART_1.write(" ");
+    }
+  }
+  USART_1.write("]");
+
+  for (size_t i = 0; i < 12; i++) {
+    USART_1.write(" ");
+    USART_1.write(HexString(frameData[i], 2));
+  }
+  USART_1.write("\r\n");
+#endif
+
+#if PRINT_PACKET_INDICATOR
+  USART_1.write(".");
+#endif
 }
 
 static void initialize() {
@@ -283,9 +325,7 @@ static void initialize() {
 }
 
 static void handleEthernetInterrupt(void) {
-  GPIO_C.clear(7);
   events.push(Event::ETHERNET_INTERRUPT);
-  GPIO_C.set(7);
 
 #if PRINT_PACKET_INDICATOR
   USART_1.write("@");
@@ -300,7 +340,17 @@ static void processEvents() {
     switch (event) {
     case Event::ETHERNET_INTERRUPT: {
       if (state == State::IDLE) {
-        state = State::RX;
+        state = State::RX_HEADER;
+      }
+
+      break;
+    }
+
+    case Event::RX_DMA_COMPLETE: {
+      if (state == State::RX_FRAME_PENDING) {
+        state = State::RX_FRAME_DONE;
+      } else {
+        // TODO: Error handling
       }
 
       break;
@@ -309,15 +359,26 @@ static void processEvents() {
   }
 
   switch (state) {
-  case State::IDLE: {
+  case State::IDLE:
+  case State::RX_FRAME_PENDING: {
     // Nothing to do
     break;
   }
 
-  case State::RX: {
+  case State::RX_HEADER: {
     if (!receiveOnePacket()) {
       state = State::IDLE;
+    } else {
+      state = State::RX_FRAME_PENDING;
     }
+
+    break;
+  }
+
+  case State::RX_FRAME_DONE: {
+    packetRxCleanup();
+    state = State::RX_HEADER;
+
     break;
   }
   }
@@ -341,9 +402,10 @@ extern "C" void main() {
   GPIO_B.setMode(13, GPIO::PinMode::ALTERNATE, 5); // SCK
   GPIO_B.setMode(14, GPIO::PinMode::ALTERNATE, 5); // MISO
   GPIO_B.setMode(15, GPIO::PinMode::ALTERNATE, 5); // MOSI
+  DMA_1.enable();
   SPI_2.configureMaster(SPI::ClockPolarity::IDLE_LOW,
                         SPI::ClockPhase::SAMPLE_ON_FIRST_EDGE,
-                        SPI::DataFrameFormat::BYTE, SPI::BaudRate::PCLK_OVER_4,
+                        SPI::DataFrameFormat::BYTE, SPI::BaudRate::PCLK_OVER_2,
                         SPI::NSSMode::MANUAL);
   SPI_2.enable();
 
