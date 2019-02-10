@@ -25,9 +25,16 @@ extern "C" void isrDMA2Stream5();
 extern "C" void isrDMA2Stream6();
 extern "C" void isrDMA2Stream7();
 
-__attribute__ ((section (".isr_vectors")))
-__attribute__ ((used))
-static void (*_isrVectors[])() = {
+extern "C" void isrEXTI0();
+extern "C" void isrEXTI1();
+extern "C" void isrEXTI2();
+extern "C" void isrEXTI3();
+extern "C" void isrEXTI4();
+extern "C" void isrEXTI9_5();
+extern "C" void isrEXTI15_10();
+
+__attribute__((section(".isr_vectors")))
+__attribute__((used)) static void (*_isrVectors[])() = {
     reinterpret_cast<void (*)()>(0x20000000 + 128 * 1024),
     &_reset,
     &_spin,
@@ -50,11 +57,11 @@ static void (*_isrVectors[])() = {
     &_spin2,
     &_spin2,
     &_spin2,
-    &_spin2,
-    &_spin2,
-    &_spin2,
-    &_spin2,
-    &_spin2,
+    &isrEXTI0,
+    &isrEXTI1,
+    &isrEXTI2,
+    &isrEXTI3,
+    &isrEXTI4,
     &isrDMA1Stream0,
     &isrDMA1Stream1,
     &isrDMA1Stream2,
@@ -67,7 +74,7 @@ static void (*_isrVectors[])() = {
     &_spin2,
     &_spin2,
     &_spin2,
-    &_spin2,
+    &isrEXTI9_5,
     &_spin2,
     &_spin2,
     &_spin2,
@@ -84,7 +91,7 @@ static void (*_isrVectors[])() = {
     &isrUSART1,
     &isrUSART2,
     &isrUSART3,
-    &_spin3,
+    &isrEXTI15_10,
     &_spin3,
     &_spin3,
     &_spin3,
@@ -140,5 +147,4 @@ static void (*_isrVectors[])() = {
     &_spin,
     &_spin,
     &_spin,
-    &_spin
-};
+    &_spin};

@@ -61,4 +61,12 @@ const char* DecString(uint32_t n, size_t len /* = 0 */) {
   return (p + 1);
 }
 
+extern "C" void* memset(void* ptr, int value, size_t num) {
+  for (size_t i = 0; i < num; i++) {
+    static_cast<unsigned char*>(ptr)[i] = static_cast<unsigned char>(value);
+  }
+
+  return ptr;
+}
+
 #endif

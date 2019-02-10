@@ -7,6 +7,7 @@
 #include "ENC28J60.h"
 
 #define DUMP_PACKET_HEADERS 0
+#define PRINT_PACKET_INDICATOR 1
 
 uint8_t generateHeaderByte(Opcode opcode, ControlRegAddress addr) {
   return (static_cast<uint8_t>(opcode) << 5) + static_cast<uint8_t>(addr);
@@ -250,6 +251,10 @@ static void initialize() {
       USART_1.write("\r\n");
 #endif
 
+#if PRINT_PACKET_INDICATOR
+      USART_1.write(".");
+#endif
+
       writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXRDPTL,
                       nextPacketPointerLow);
       writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXRDPTH,
@@ -262,6 +267,15 @@ static void initialize() {
 
     DELAY(1000);
   }
+}
+
+static void handleEthernetInterrupt(void) {
+  GPIO_C.clear(7);
+  DELAY(10);
+  GPIO_C.set(7);
+  DELAY(10);
+
+  USART_1.write("@");
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -291,6 +305,11 @@ extern "C" void main() {
   GPIO_C.enable();
   GPIO_C.setMode(7, GPIO::PinMode::OUTPUT);
   GPIO_C.set(7);
+  GPIO_C.setMode(8, GPIO::PinMode::OUTPUT);
+  GPIO_C.set(8);
+  GPIO_C.setMode(9, GPIO::PinMode::INPUT);
+  GPIO_C.enableExternalInterrupt(9, GPIO::TriggerDirection::FALLING_EDGE,
+                                 handleEthernetInterrupt);
 
   USART_1.write("Hello, SPI ENC28J60!\r\n");
 

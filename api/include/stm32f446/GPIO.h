@@ -2,9 +2,21 @@
 
 #include <DeviceHeader.h>
 
+extern "C" void isrEXTI0();
+extern "C" void isrEXTI1();
+extern "C" void isrEXTI2();
+extern "C" void isrEXTI3();
+extern "C" void isrEXTI4();
+extern "C" void isrEXTI9_5();
+extern "C" void isrEXTI15_10();
+
 class GPIO {
 private:
   GPIO_TypeDef* gpio_;
+
+  InterruptHandler interruptHandlers_[16] = {0};
+
+  static void handleInterrupt(size_t pinLow, size_t pinHigh);
 
 public:
   enum class PinMode {
@@ -12,6 +24,12 @@ public:
     OUTPUT = 0b01,
     ALTERNATE = 0b10,
     ANALOG = 0b11,
+  };
+
+  enum class TriggerDirection {
+    RISING_EDGE,
+    FALLING_EDGE,
+    BOTH,
   };
 
   GPIO(GPIO_TypeDef* gpio) { gpio_ = gpio; }
@@ -24,11 +42,21 @@ public:
   void enable();
 
   void setMode(int pin, PinMode mode, uint32_t alternate = 0);
+  void enableExternalInterrupt(int pin, TriggerDirection direction,
+                               InterruptHandler handler);
 
   void set(int pin) { gpio_->BSRR = (1UL << pin); }
   void clear(int pin) { gpio_->BSRR = (1UL << (pin + 16)); }
   void toggle(int pin) { gpio_->ODR ^= (1UL << pin); }
   bool get(int pin) { return (gpio_->IDR & (1UL << pin)) != 0; }
+
+  friend void isrEXTI0();
+  friend void isrEXTI1();
+  friend void isrEXTI2();
+  friend void isrEXTI3();
+  friend void isrEXTI4();
+  friend void isrEXTI9_5();
+  friend void isrEXTI15_10();
 };
 
 extern GPIO GPIO_A;
