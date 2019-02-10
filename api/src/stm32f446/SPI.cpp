@@ -71,19 +71,12 @@ bool SPI::transmit(uint16_t const* data, size_t len) {
 }
 
 bool SPI::transact(uint16_t* data, size_t len) {
-  // We assume that the SPI peripheral is idle with all error flags cleared at
-  // the beginning of both `transmit` and `transact`.
-  spi_->DR = data[0];
-
-  for (size_t i = 1; i < len; i++) {
+  for (size_t i = 0; i < len; i++) {
     WAIT_UNTIL(BIT_IS_SET(spi_->SR, SPI_SR_TXE));
     spi_->DR = data[i];
     WAIT_UNTIL(BIT_IS_SET(spi_->SR, SPI_SR_RXNE));
-    data[i - 1] = spi_->DR;
+    data[i] = spi_->DR;
   }
-
-  WAIT_UNTIL(BIT_IS_SET(spi_->SR, SPI_SR_RXNE));
-  data[len - 1] = spi_->DR;
 
   WAIT_UNTIL(!BIT_IS_SET(spi_->SR, SPI_SR_BSY));
 
