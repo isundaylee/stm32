@@ -4,10 +4,25 @@
 #include <SPI.h>
 #include <USART.h>
 
+#include <RingBuffer.h>
+
 #include "ENC28J60.h"
 
 #define DUMP_PACKET_HEADERS 0
 #define PRINT_PACKET_INDICATOR 1
+
+enum class Event {
+  ETHERNET_INTERRUPT,
+};
+
+enum class State {
+  IDLE,
+  RX,
+};
+
+RingBuffer<Event, 16> events;
+
+auto state = State::IDLE;
 
 uint8_t generateHeaderByte(Opcode opcode, ControlRegAddress addr) {
   return (static_cast<uint8_t>(opcode) << 5) + static_cast<uint8_t>(addr);
@@ -202,6 +217,52 @@ static void initializePHY() {
   writePHYReg(PHYRegAddress::PHCON1, PHCON1_PDPXMD);
 }
 
+static bool receiveOnePacket() {
+  if (readETHReg(ControlRegBank::BANK_1, ControlRegAddress::EPKTCNT) == 0) {
+    return false;
+  }
+
+  uint16_t header[6];
+  readBufferMemory(header, 6);
+
+  uint8_t nextPacketPointerLow = static_cast<uint8_t>(header[0]);
+  uint8_t nextPacketPointerHigh = static_cast<uint8_t>(header[1]);
+  size_t frameLen = header[2] + (header[3] << 8);
+
+  static uint16_t data[1536];
+  readBufferMemory(data, frameLen + (frameLen % 2));
+
+#if DUMP_PACKET_HEADERS
+  USART_1.write("[");
+  for (size_t i = 0; i < 6; i++) {
+    USART_1.write(HexString(header[i], 2));
+    if (i != 5) {
+      USART_1.write(" ");
+    }
+  }
+  USART_1.write("]");
+
+  for (size_t i = 0; i < 12; i++) {
+    USART_1.write(" ");
+    USART_1.write(HexString(data[i], 2));
+  }
+  USART_1.write("\r\n");
+#endif
+
+#if PRINT_PACKET_INDICATOR
+  USART_1.write(".");
+#endif
+
+  writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXRDPTL,
+                  nextPacketPointerLow);
+  writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXRDPTH,
+                  nextPacketPointerHigh);
+  setETHRegBitField(ControlRegBank::BANK_0, ControlRegAddress::ECON2,
+                    ECON2_PKTDEC);
+
+  return true;
+}
+
 static void initialize() {
   initializeETH();
   initializeMAC();
@@ -219,63 +280,47 @@ static void initialize() {
                     ECON1_RXEN);
   setETHRegBitField(ControlRegBank::BANK_0, ControlRegAddress::EIE,
                     EIE_INTIE | EIE_PKTIE);
-
-  while (true) {
-    if (readETHReg(ControlRegBank::BANK_1, ControlRegAddress::EPKTCNT) != 0) {
-      GPIO_C.clear(7);
-
-      uint16_t header[6];
-      readBufferMemory(header, 6);
-
-      uint8_t nextPacketPointerLow = static_cast<uint8_t>(header[0]);
-      uint8_t nextPacketPointerHigh = static_cast<uint8_t>(header[1]);
-      size_t frameLen = header[2] + (header[3] << 8);
-
-      static uint16_t data[1536];
-      readBufferMemory(data, frameLen + (frameLen % 2));
-
-#if DUMP_PACKET_HEADERS
-      USART_1.write("[");
-      for (size_t i = 0; i < 6; i++) {
-        USART_1.write(HexString(header[i], 2));
-        if (i != 5) {
-          USART_1.write(" ");
-        }
-      }
-      USART_1.write("]");
-
-      for (size_t i = 0; i < 12; i++) {
-        USART_1.write(" ");
-        USART_1.write(HexString(data[i], 2));
-      }
-      USART_1.write("\r\n");
-#endif
-
-#if PRINT_PACKET_INDICATOR
-      USART_1.write(".");
-#endif
-
-      writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXRDPTL,
-                      nextPacketPointerLow);
-      writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXRDPTH,
-                      nextPacketPointerHigh);
-      setETHRegBitField(ControlRegBank::BANK_0, ControlRegAddress::ECON2,
-                        ECON2_PKTDEC);
-
-      GPIO_C.set(7);
-    }
-
-    DELAY(1000);
-  }
 }
 
 static void handleEthernetInterrupt(void) {
   GPIO_C.clear(7);
-  DELAY(10);
+  events.push(Event::ETHERNET_INTERRUPT);
   GPIO_C.set(7);
-  DELAY(10);
 
+#if PRINT_PACKET_INDICATOR
   USART_1.write("@");
+#endif
+}
+
+static void processEvents() {
+  while (!events.empty()) {
+    Event event{};
+    events.pop(event);
+
+    switch (event) {
+    case Event::ETHERNET_INTERRUPT: {
+      if (state == State::IDLE) {
+        state = State::RX;
+      }
+
+      break;
+    }
+    }
+  }
+
+  switch (state) {
+  case State::IDLE: {
+    // Nothing to do
+    break;
+  }
+
+  case State::RX: {
+    if (!receiveOnePacket()) {
+      state = State::IDLE;
+    }
+    break;
+  }
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -316,5 +361,6 @@ extern "C" void main() {
   initialize();
 
   while (true) {
+    processEvents();
   }
 }
