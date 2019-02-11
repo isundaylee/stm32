@@ -34,7 +34,7 @@ uint8_t poorMansRand() {
   return ans;
 }
 
-void handleTxDMAEvent(DMA::StreamEvent event) {
+void handleTxDMAEvent(DMA::StreamEvent event, void*) {
   switch (event.type) {
   case DMA::StreamEventType::TRANSFER_COMPLETE:
     events.push(Event{EventType::TX_DMA_DONE});
@@ -68,11 +68,12 @@ static void initialize() {
   DMA_1.configureStream(4, 0, DMA::Direction::MEM_TO_PERI, TRANSACTION_SIZE,
                         DMA::FIFOThreshold::DIRECT, false,
                         DMA::Priority::VERY_HIGH, txData, DMA::Size::BYTE, true,
-                        &SPI2->DR, DMA::Size::BYTE, false, handleTxDMAEvent);
+                        &SPI2->DR, DMA::Size::BYTE, false, handleTxDMAEvent,
+                        nullptr);
   DMA_1.configureStream(3, 0, DMA::Direction::PERI_TO_MEM, TRANSACTION_SIZE,
                         DMA::FIFOThreshold::DIRECT, false,
                         DMA::Priority::VERY_HIGH, &SPI2->DR, DMA::Size::BYTE,
-                        false, rxData, DMA::Size::BYTE, true, nullptr);
+                        false, rxData, DMA::Size::BYTE, true, nullptr, nullptr);
   SPI_2.enable();
 }
 

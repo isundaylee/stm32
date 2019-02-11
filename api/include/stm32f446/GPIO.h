@@ -11,10 +11,14 @@ extern "C" void isrEXTI9_5();
 extern "C" void isrEXTI15_10();
 
 class GPIO {
+public:
+  using InterruptHandler = void (*)(void* context);
+
 private:
   GPIO_TypeDef* gpio_;
 
   InterruptHandler interruptHandlers_[16] = {0};
+  void* interruptHandlerContexts_[16];
 
   static void handleInterrupt(size_t pinLow, size_t pinHigh);
 
@@ -43,7 +47,7 @@ public:
 
   void setMode(int pin, PinMode mode, uint32_t alternate = 0);
   void enableExternalInterrupt(int pin, TriggerDirection direction,
-                               InterruptHandler handler);
+                               InterruptHandler handler, void* handlerContext);
 
   void set(int pin) { gpio_->BSRR = (1UL << pin); }
   void clear(int pin) { gpio_->BSRR = (1UL << (pin + 16)); }

@@ -70,7 +70,8 @@ void DMA::configureStream(int streamNumber, uint32_t channel, Direction dir,
                           uint32_t n, FIFOThreshold fifoThres, bool circular,
                           Priority priority, volatile void* src, Size srcSize,
                           bool srcInc, volatile void* dst, Size dstSize,
-                          bool dstInc, StreamEventHandler eventHandler) {
+                          bool dstInc, StreamEventHandler eventHandler,
+                          void* eventHandlerContext) {
   DMA_Stream_TypeDef* stream = getStream(streamNumber);
 
   stream->CR = 0;
@@ -122,6 +123,7 @@ void DMA::configureStream(int streamNumber, uint32_t channel, Direction dir,
   }
 
   streamEventHandlers_[streamNumber] = eventHandler;
+  streamEventHandlerContexts_[streamNumber] = eventHandlerContext;
 
   BIT_SET(stream->CR, DMA_SxCR_TCIE);
 
@@ -163,7 +165,8 @@ void DMA::handleInterrupt(int streamNumber) {
 
     if (streamEventHandlers_[streamNumber] != NULL) {
       streamEventHandlers_[streamNumber](
-          StreamEvent{StreamEventType::TRANSFER_COMPLETE});
+          StreamEvent{StreamEventType::TRANSFER_COMPLETE},
+          streamEventHandlerContexts_[streamNumber]);
     }
   }
 }

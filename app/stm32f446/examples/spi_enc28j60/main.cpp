@@ -12,277 +12,18 @@
 #define DUMP_PACKET_HEADERS 0
 #define PRINT_PACKET_INDICATOR 1
 
-enum class Event {
-  ETHERNET_INTERRUPT,
-  RX_DMA_COMPLETE,
-};
+enum class Event {};
 
 enum class State {
   IDLE,
-  RX_HEADER,
-  RX_FRAME_PENDING,
-  RX_FRAME_DONE,
 };
 
-static RingBuffer<Event, 16> events;
+ENC28J60 eth;
 
+static RingBuffer<Event, 16> events;
 static auto state = State::IDLE;
 
-static uint16_t packetHeader[6];
-static uint8_t frameData[1536];
-static uint8_t nextPacketPointerLow;
-static uint8_t nextPacketPointerHigh;
-
-uint8_t generateHeaderByte(Opcode opcode, ControlRegAddress addr) {
-  return (static_cast<uint8_t>(opcode) << 5) + static_cast<uint8_t>(addr);
-}
-
-void selectControlRegBank(ControlRegBank bank) {
-  static auto currentBank = ControlRegBank::BANK_0;
-
-  if (currentBank == bank) {
-    return;
-  } else {
-    currentBank = bank;
-  }
-
-  uint16_t data[] = {
-      generateHeaderByte(Opcode::BIT_FIELD_CLEAR, ControlRegAddress::ECON1),
-      0b00000011};
-
-  GPIO_B.clear(12);
-  SPI_2.transact(data, sizeof(data) / sizeof(data[0]));
-  GPIO_B.set(12);
-
-  data[0] = generateHeaderByte(Opcode::BIT_FIELD_SET, ControlRegAddress::ECON1);
-  data[1] = static_cast<uint8_t>(bank);
-
-  GPIO_B.clear(12);
-  SPI_2.transact(data, sizeof(data) / sizeof(data[0]));
-  GPIO_B.set(12);
-}
-
-void setETHRegBitField(ControlRegBank bank, ControlRegAddress addr,
-                       uint8_t bits) {
-  selectControlRegBank(bank);
-
-  uint16_t data[] = {generateHeaderByte(Opcode::BIT_FIELD_SET, addr), bits};
-
-  GPIO_B.clear(12);
-  SPI_2.transact(data, sizeof(data) / sizeof(data[0]));
-  GPIO_B.set(12);
-}
-
-void clearETHRegBitField(ControlRegBank bank, ControlRegAddress addr,
-                         uint8_t bits) {
-  selectControlRegBank(bank);
-
-  uint16_t data[] = {generateHeaderByte(Opcode::BIT_FIELD_CLEAR, addr), bits};
-
-  GPIO_B.clear(12);
-  SPI_2.transact(data, sizeof(data) / sizeof(data[0]));
-  GPIO_B.set(12);
-}
-
-uint8_t readETHReg(ControlRegBank bank, ControlRegAddress addr) {
-  selectControlRegBank(bank);
-
-  uint16_t data[] = {generateHeaderByte(Opcode::READ_CONTROL_REGISTER, addr),
-                     0x00};
-
-  GPIO_B.clear(12);
-  SPI_2.transact(data, sizeof(data) / sizeof(data[0]));
-  GPIO_B.set(12);
-
-  return static_cast<uint8_t>(data[1]);
-}
-
-uint8_t writeControlReg(ControlRegBank bank, ControlRegAddress addr,
-                        uint8_t value) {
-  selectControlRegBank(bank);
-
-  uint16_t data[] = {generateHeaderByte(Opcode::WRITE_CONTROL_REGISTER, addr),
-                     value};
-
-  GPIO_B.clear(12);
-  SPI_2.transact(data, sizeof(data) / sizeof(data[0]));
-  GPIO_B.set(12);
-
-  return static_cast<uint8_t>(data[1]);
-}
-
-uint8_t readMACMIIReg(ControlRegBank bank, ControlRegAddress addr) {
-  selectControlRegBank(bank);
-
-  uint16_t data[] = {generateHeaderByte(Opcode::READ_CONTROL_REGISTER, addr),
-                     0x00, 0x00};
-
-  GPIO_B.clear(12);
-  SPI_2.transact(data, sizeof(data) / sizeof(data[0]));
-  GPIO_B.set(12);
-
-  return static_cast<uint8_t>(data[2]);
-}
-
-static void initializeETH() {
-  writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXSTL, 0x00);
-  writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXSTH, 0x00);
-  writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXNDL, 0xFF);
-  writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXNDH, 0x0F);
-  writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERDPTL, 0x00);
-  writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERDPTH, 0x00);
-  writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXRDPTL, 0x00);
-  writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXRDPTH, 0x00);
-
-  writeControlReg(ControlRegBank::BANK_1, ControlRegAddress::ERXFCON, 0x00);
-
-  WAIT_UNTIL(
-      BIT_IS_SET(readETHReg(ControlRegBank::BANK_0, ControlRegAddress::ESTAT),
-                 0b00000001));
-}
-
-static void initializeMAC() {
-  writeControlReg(ControlRegBank::BANK_2, ControlRegAddress::MACON1,
-                  MACON1_MARXEN | MACON1_TXPAUS | MACON1_RXPAUS);
-  writeControlReg(ControlRegBank::BANK_2, ControlRegAddress::MACON3,
-                  MACON3_PADCFG0 | MACON3_FRMLNEN | MACON3_FULDPX);
-  writeControlReg(ControlRegBank::BANK_2, ControlRegAddress::MACON4,
-                  MACON4_DEFER);
-
-  writeControlReg(ControlRegBank::BANK_2, ControlRegAddress::MAMXFLL, 0x00);
-  writeControlReg(ControlRegBank::BANK_2, ControlRegAddress::MAMXFLH, 0x06);
-
-  writeControlReg(ControlRegBank::BANK_2, ControlRegAddress::MABBIPG, 0x15);
-  writeControlReg(ControlRegBank::BANK_2, ControlRegAddress::MAIPGL, 0x12);
-
-  writeControlReg(ControlRegBank::BANK_3, ControlRegAddress::MAADR1, 0x11);
-  writeControlReg(ControlRegBank::BANK_3, ControlRegAddress::MAADR2, 0x22);
-  writeControlReg(ControlRegBank::BANK_3, ControlRegAddress::MAADR3, 0x33);
-  writeControlReg(ControlRegBank::BANK_3, ControlRegAddress::MAADR4, 0x44);
-  writeControlReg(ControlRegBank::BANK_3, ControlRegAddress::MAADR5, 0x55);
-  writeControlReg(ControlRegBank::BANK_3, ControlRegAddress::MAADR6, 0x66);
-}
-
-uint16_t readPHYReg(PHYRegAddress addr) {
-  writeControlReg(ControlRegBank::BANK_2, ControlRegAddress::MIREGADR,
-                  static_cast<uint8_t>(addr));
-  writeControlReg(ControlRegBank::BANK_2, ControlRegAddress::MICMD, 0x01);
-  WAIT_UNTIL(BIT_IS_CLEAR(
-      readMACMIIReg(ControlRegBank::BANK_3, ControlRegAddress::MISTAT), 0x01));
-  writeControlReg(ControlRegBank::BANK_2, ControlRegAddress::MICMD, 0x00);
-
-  uint8_t low = readMACMIIReg(ControlRegBank::BANK_2, ControlRegAddress::MIRDL);
-  uint8_t high =
-      readMACMIIReg(ControlRegBank::BANK_2, ControlRegAddress::MIRDH);
-
-  return static_cast<uint16_t>(low) + (static_cast<uint16_t>(high) << 8);
-}
-
-void writePHYReg(PHYRegAddress addr, uint16_t value) {
-  writeControlReg(ControlRegBank::BANK_2, ControlRegAddress::MIREGADR,
-                  static_cast<uint8_t>(addr));
-  writeControlReg(ControlRegBank::BANK_2, ControlRegAddress::MIWRL,
-                  static_cast<uint8_t>(value & 0x00FF));
-  writeControlReg(ControlRegBank::BANK_2, ControlRegAddress::MIWRH,
-                  static_cast<uint8_t>(value >> 8));
-  WAIT_UNTIL(BIT_IS_CLEAR(
-      readMACMIIReg(ControlRegBank::BANK_3, ControlRegAddress::MISTAT), 0x01));
-}
-
-void printETHReg(ControlRegBank bank, ControlRegAddress addr,
-                 char const* name) {
-  USART_1.write(name);
-  USART_1.write(": ");
-  USART_1.write(HexString(readETHReg(bank, addr)));
-  USART_1.write("\r\n");
-}
-
-void printMACMIIReg(ControlRegBank bank, ControlRegAddress addr,
-                    char const* name) {
-  USART_1.write(name);
-  USART_1.write(": ");
-  USART_1.write(HexString(readMACMIIReg(bank, addr)));
-  USART_1.write("\r\n");
-}
-
-void printPHYReg(PHYRegAddress addr, char const* name) {
-  USART_1.write(name);
-  USART_1.write(": ");
-  USART_1.write(HexString(readPHYReg(addr)));
-  USART_1.write("\r\n");
-}
-
-void readBufferMemoryStart() {
-  uint16_t header[] = {generateHeaderByte(
-      Opcode::READ_BUFFER_MEMORY, ControlRegAddress::READ_BUFFER_MEMORY)};
-
-  GPIO_B.clear(12);
-  SPI_2.transact(header, sizeof(header) / sizeof(header[0]));
-}
-
-void readBufferMemoryEnd() { GPIO_B.set(12); }
-
-void readBufferMemory(uint16_t* data, size_t len) {
-  readBufferMemoryStart();
-  SPI_2.transact(data, len);
-  readBufferMemoryEnd();
-}
-
-static void initializePHY() {
-  writePHYReg(PHYRegAddress::PHCON1, PHCON1_PDPXMD);
-}
-
-static void handleRxDMAEvent(DMA::StreamEvent event) {
-  switch (event.type) {
-  case DMA::StreamEventType::TRANSFER_COMPLETE:
-    events.push(Event::RX_DMA_COMPLETE);
-    break;
-  }
-}
-
-static bool receiveOnePacket() {
-  if (readETHReg(ControlRegBank::BANK_1, ControlRegAddress::EPKTCNT) == 0) {
-    return false;
-  }
-
-  readBufferMemory(packetHeader, 6);
-
-  nextPacketPointerLow = static_cast<uint8_t>(packetHeader[0]);
-  nextPacketPointerHigh = static_cast<uint8_t>(packetHeader[1]);
-  size_t frameLen = packetHeader[2] + (packetHeader[3] << 8);
-
-  size_t transactionSize = frameLen + (frameLen % 2);
-
-  readBufferMemoryStart();
-  SPI_2.enableTxDMA();
-  SPI_2.enableRxDMA();
-  DMA_1.configureStream(4, 0, DMA::Direction::MEM_TO_PERI, transactionSize,
-                        DMA::FIFOThreshold::DIRECT, false,
-                        DMA::Priority::VERY_HIGH, frameData, DMA::Size::BYTE,
-                        true, &SPI2->DR, DMA::Size::BYTE, false, nullptr);
-  DMA_1.configureStream(3, 0, DMA::Direction::PERI_TO_MEM, transactionSize,
-                        DMA::FIFOThreshold::DIRECT, false,
-                        DMA::Priority::VERY_HIGH, &SPI2->DR, DMA::Size::BYTE,
-                        false, frameData, DMA::Size::BYTE, true,
-                        handleRxDMAEvent);
-  DMA_1.enableStream(3);
-  DMA_1.enableStream(4);
-
-  return true;
-}
-
 static void packetRxCleanup() {
-  readBufferMemoryEnd();
-  SPI_2.disableRxDMA();
-  SPI_2.disableTxDMA();
-
-  writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXRDPTL,
-                  nextPacketPointerLow);
-  writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXRDPTH,
-                  nextPacketPointerHigh);
-  setETHRegBitField(ControlRegBank::BANK_0, ControlRegAddress::ECON2,
-                    ECON2_PKTDEC);
-
 #if DUMP_PACKET_HEADERS
   USART_1.write("[");
   for (size_t i = 0; i < 6; i++) {
@@ -305,83 +46,24 @@ static void packetRxCleanup() {
 #endif
 }
 
-static void initialize() {
-  initializeETH();
-  initializeMAC();
-  initializePHY();
+static void initializeEthernet() {
+  eth.enable(&SPI_2, &GPIO_B, 12, &GPIO_C, 9, &DMA_1, 4, 0, &DMA_1, 3, 0,
+             ENC28J60::Mode::FULL_DUPLEX);
 
   USART_1.write("Waiting for link");
-  while (BIT_IS_CLEAR(readPHYReg(PHYRegAddress::PHSTAT1), PHSTAT1_LLSTAT)) {
+  while (!eth.linkIsUp()) {
     USART_1.write(".");
     DELAY(1000000);
   }
   USART_1.write("\r\n");
   USART_1.write("Link is up!\r\n");
 
-  setETHRegBitField(ControlRegBank::BANK_0, ControlRegAddress::ECON1,
-                    ECON1_RXEN);
-  setETHRegBitField(ControlRegBank::BANK_0, ControlRegAddress::EIE,
-                    EIE_INTIE | EIE_PKTIE);
-}
-
-static void handleEthernetInterrupt(void) {
-  events.push(Event::ETHERNET_INTERRUPT);
-
-#if PRINT_PACKET_INDICATOR
-  USART_1.write("@");
-#endif
+  eth.enableRx();
 }
 
 static void processEvents() {
-  while (!events.empty()) {
-    Event event{};
-    events.pop(event);
-
-    switch (event) {
-    case Event::ETHERNET_INTERRUPT: {
-      if (state == State::IDLE) {
-        state = State::RX_HEADER;
-      }
-
-      break;
-    }
-
-    case Event::RX_DMA_COMPLETE: {
-      if (state == State::RX_FRAME_PENDING) {
-        state = State::RX_FRAME_DONE;
-      } else {
-        // TODO: Error handling
-      }
-
-      break;
-    }
-    }
-  }
-
-  switch (state) {
-  case State::IDLE:
-  case State::RX_FRAME_PENDING: {
-    // Nothing to do
-    break;
-  }
-
-  case State::RX_HEADER: {
-    if (!receiveOnePacket()) {
-      state = State::IDLE;
-    } else {
-      state = State::RX_FRAME_PENDING;
-    }
-
-    break;
-  }
-
-  case State::RX_FRAME_DONE: {
-    packetRxCleanup();
-    state = State::RX_HEADER;
-
-    break;
-  }
-  }
+  FORCE_READ(state);
+  FORCE_READ(packetRxCleanup);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -402,7 +84,6 @@ extern "C" void main() {
   GPIO_B.setMode(13, GPIO::PinMode::ALTERNATE, 5); // SCK
   GPIO_B.setMode(14, GPIO::PinMode::ALTERNATE, 5); // MISO
   GPIO_B.setMode(15, GPIO::PinMode::ALTERNATE, 5); // MOSI
-  DMA_1.enable();
   SPI_2.configureMaster(SPI::ClockPolarity::IDLE_LOW,
                         SPI::ClockPhase::SAMPLE_ON_FIRST_EDGE,
                         SPI::DataFrameFormat::BYTE, SPI::BaudRate::PCLK_OVER_2,
@@ -415,14 +96,13 @@ extern "C" void main() {
   GPIO_C.setMode(8, GPIO::PinMode::OUTPUT);
   GPIO_C.set(8);
   GPIO_C.setMode(9, GPIO::PinMode::INPUT);
-  GPIO_C.enableExternalInterrupt(9, GPIO::TriggerDirection::FALLING_EDGE,
-                                 handleEthernetInterrupt);
 
   USART_1.write("Hello, SPI ENC28J60!\r\n");
 
-  initialize();
+  initializeEthernet();
 
   while (true) {
+    eth.process();
     processEvents();
   }
 }

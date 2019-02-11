@@ -58,7 +58,7 @@ DEFINE_EXTI_ISR(15_10, 10, 15);
     }
 
     if (gpio->interruptHandlers_[pin] != 0) {
-      gpio->interruptHandlers_[pin]();
+      gpio->interruptHandlers_[pin](gpio->interruptHandlerContexts_[pin]);
     }
 
     EXTI->PR |= (1U << pin);
@@ -83,10 +83,12 @@ void GPIO::setMode(int pin, PinMode mode, uint32_t alternate /* = 0 */) {
 }
 
 void GPIO::enableExternalInterrupt(int pin, TriggerDirection direction,
-                                   InterruptHandler handler) {
+                                   InterruptHandler handler,
+                                   void* handlerContext) {
   BIT_SET(RCC->APB2ENR, RCC_APB2ENR_SYSCFGEN);
 
   interruptHandlers_[pin] = handler;
+  interruptHandlerContexts_[pin] = handlerContext;
 
   size_t portNumber =
       (reinterpret_cast<uintptr_t>(gpio_) -

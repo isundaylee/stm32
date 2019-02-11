@@ -29,12 +29,13 @@ public:
     StreamEventType type;
   };
 
-  using StreamEventHandler = void (*)(StreamEvent event);
+  using StreamEventHandler = void (*)(StreamEvent event, void* context);
 
 private:
   DMA_TypeDef* dma_;
 
   StreamEventHandler streamEventHandlers_[8];
+  void* streamEventHandlerContexts_[8];
 
   DMA_Stream_TypeDef* getStream(int streamNumber);
 
@@ -76,7 +77,8 @@ public:
                        uint32_t n, FIFOThreshold fifoThres, bool circular,
                        Priority priority, volatile void* src, Size srcSize,
                        bool srcInc, volatile void* dst, Size dstSize,
-                       bool dstInc, StreamEventHandler eventHandler);
+                       bool dstInc, StreamEventHandler eventHandler,
+                       void* eventHandlerContext);
   void enableStream(int streamNumber);
 
   friend void isrDMA1Stream0();
