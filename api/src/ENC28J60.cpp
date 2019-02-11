@@ -1,7 +1,5 @@
 #include "ENC28J60.h"
 
-#include <USART.h>
-
 uint8_t ENC28J60::generateHeaderByte(Opcode opcode, ControlRegAddress addr) {
   return (static_cast<uint8_t>(opcode) << 5) + static_cast<uint8_t>(addr);
 }
@@ -188,8 +186,8 @@ void enc28j60HandleRxDMAEventWrapper(DMA::StreamEvent event, void* context) {
 
 void ENC28J60::enable(SPI* spi, GPIO* gpioCS, int pinCS, GPIO* gpioInt,
                       int pinInt, DMA* dmaTx, int dmaStreamTx, int dmaChannelTx,
-                      DMA* dmaRx, int dmaStreamRx, int dmaChannelRx,
-                      Mode mode) {
+                      DMA* dmaRx, int dmaStreamRx, int dmaChannelRx, Mode mode,
+                      EventHandler eventHandler, void* eventHandlerContext) {
   spi_ = spi;
   gpioCS_ = gpioCS;
   pinCS_ = pinCS;
@@ -202,6 +200,8 @@ void ENC28J60::enable(SPI* spi, GPIO* gpioCS, int pinCS, GPIO* gpioInt,
   dmaStreamRx_ = dmaStreamRx;
   dmaChannelRx_ = dmaChannelRx;
   mode_ = mode;
+  eventHandler_ = eventHandler;
+  eventHandlerContext_ = eventHandlerContext;
 
   GPIO_C.enableExternalInterrupt(9, GPIO::TriggerDirection::FALLING_EDGE,
                                  enc28j60HandleInterruptWrapper, this);
@@ -216,11 +216,23 @@ bool ENC28J60::receivePacketHeader() {
     return false;
   }
 
-  readBufferMemory(packetHeader_, 6);
+  // Allocate the new RX packet
+  currentRxPacket_ = rxPacketBuffer_.allocate();
 
-  size_t frameLen = static_cast<size_t>(packetHeader_[2]) +
-                    (static_cast<size_t>(packetHeader_[3]) << 8);
+  // Reader packet header and calculate frame size
+  uint16_t* packetHeader =
+      (!!currentRxPacket_ ? currentRxPacket_->header : devNullHeader_);
+  size_t frameLen;
 
+  readBufferMemory(packetHeader, PACKET_HEADER_SIZE);
+  frameLen = static_cast<size_t>(packetHeader[2]) +
+             (static_cast<size_t>(packetHeader[3]) << 8);
+
+  if (!!currentRxPacket_) {
+    currentRxPacket_->frameLength = frameLen;
+  }
+
+  // Starts DMA transactions to read packet frame
   size_t transactionSize = frameLen + (frameLen % 2);
 
   readBufferMemoryStart();
@@ -228,16 +240,22 @@ bool ENC28J60::receivePacketHeader() {
   spi_->enableRxDMA();
   dmaTx_->enable();
   dmaRx_->enable();
+
+  uint8_t* rxDst =
+      (!!currentRxPacket_ ? currentRxPacket_->frame : &devNullFrame_);
+  bool rxDstInc = (!!currentRxPacket_ ? true : false);
+
   dmaTx_->configureStream(
       dmaStreamTx_, dmaChannelTx_, DMA::Direction::MEM_TO_PERI, transactionSize,
-      DMA::FIFOThreshold::DIRECT, false, DMA::Priority::VERY_HIGH, frameData_,
-      DMA::Size::BYTE, true, &SPI2->DR, DMA::Size::BYTE, false, nullptr,
+      DMA::FIFOThreshold::DIRECT, false, DMA::Priority::VERY_HIGH, rxDst,
+      DMA::Size::BYTE, rxDstInc, &SPI2->DR, DMA::Size::BYTE, false, nullptr,
       nullptr);
   dmaRx_->configureStream(
       dmaStreamRx_, dmaChannelRx_, DMA::Direction::PERI_TO_MEM, transactionSize,
       DMA::FIFOThreshold::DIRECT, false, DMA::Priority::VERY_HIGH, &SPI2->DR,
-      DMA::Size::BYTE, false, frameData_, DMA::Size::BYTE, true,
+      DMA::Size::BYTE, false, rxDst, DMA::Size::BYTE, rxDstInc,
       enc28j60HandleRxDMAEventWrapper, this);
+
   dmaTx_->enableStream(dmaStreamTx_);
   dmaRx_->enableStream(dmaStreamRx_);
 
@@ -249,30 +267,45 @@ void ENC28J60::receivePacketCleanup() {
   SPI_2.disableRxDMA();
   SPI_2.disableTxDMA();
 
+  uint16_t* packetHeader =
+      (!!currentRxPacket_ ? currentRxPacket_->header : devNullHeader_);
+
   writeControlReg(ENC28J60::ControlRegBank::BANK_0,
                   ENC28J60::ControlRegAddress::ERXRDPTL,
-                  static_cast<uint8_t>(packetHeader_[0]));
+                  static_cast<uint8_t>(packetHeader[0]));
   writeControlReg(ENC28J60::ControlRegBank::BANK_0,
                   ENC28J60::ControlRegAddress::ERXRDPTH,
-                  static_cast<uint8_t>(packetHeader_[1]));
+                  static_cast<uint8_t>(packetHeader[1]));
   setETHRegBitField(ENC28J60::ControlRegBank::BANK_0,
                     ENC28J60::ControlRegAddress::ECON2, ENC28J60::ECON2_PKTDEC);
+
+  if (!!currentRxPacket_) {
+    rxBuffer.push(currentRxPacket_);
+  }
+
+  if (!!eventHandler_) {
+    eventHandler_((!!currentRxPacket_) ? Event::RX_NEW_PACKET
+                                       : Event::RX_OVERFLOW,
+                  eventHandlerContext_);
+  }
+
+  currentRxPacket_ = nullptr;
 }
 
 void ENC28J60::process() {
   while (!events_.empty()) {
-    Event event{};
+    InternalEvent event{};
     events_.pop(event);
 
     switch (event) {
-    case Event::INTERRUPT: {
+    case InternalEvent::INTERRUPT: {
       if (state_ == State::IDLE) {
         state_ = State::RX_HEADER;
       }
       break;
     }
 
-    case Event::RX_DMA_COMPLETE: {
+    case InternalEvent::RX_DMA_COMPLETE: {
       if (state_ == State::RX_FRAME_PENDING) {
         state_ = State::RX_FRAME_DONE;
       } else {
@@ -282,30 +315,30 @@ void ENC28J60::process() {
       break;
     }
     }
+  }
 
-    switch (state_) {
-    case State::IDLE:
-    case State::RX_FRAME_PENDING: {
-      // Nothing to do
-      break;
+  switch (state_) {
+  case State::IDLE:
+  case State::RX_FRAME_PENDING: {
+    // Nothing to do
+    break;
+  }
+
+  case State::RX_HEADER: {
+    if (!receivePacketHeader()) {
+      state_ = State::IDLE;
+    } else {
+      state_ = State::RX_FRAME_PENDING;
     }
 
-    case State::RX_HEADER: {
-      if (!receivePacketHeader()) {
-        state_ = State::IDLE;
-      } else {
-        state_ = State::RX_FRAME_PENDING;
-      }
+    break;
+  }
 
-      break;
-    }
+  case State::RX_FRAME_DONE: {
+    receivePacketCleanup();
+    state_ = State::RX_HEADER;
 
-    case State::RX_FRAME_DONE: {
-      receivePacketCleanup();
-      state_ = State::RX_HEADER;
-
-      break;
-    }
-    }
+    break;
+  }
   }
 }

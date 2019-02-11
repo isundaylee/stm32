@@ -4,6 +4,7 @@
 #include <GPIO.h>
 #include <SPI.h>
 
+#include <FreeListBuffer.h>
 #include <RingBuffer.h>
 
 void enc28j60HandleInterruptWrapper(void* context);
@@ -212,8 +213,24 @@ public:
   static const uint16_t PHSTAT1_LLSTAT = 0b0000000000000100;
   static const uint16_t PHSTAT1_JBSTAT = 0b0000000000000010;
 
+  static const size_t PACKET_HEADER_SIZE = 6;
+  static const size_t PACKET_FRAME_SIZE = 1600;
+
+  struct Packet {
+    uint16_t header[PACKET_HEADER_SIZE] = {0};
+    size_t frameLength = 0;
+    uint8_t frame[PACKET_FRAME_SIZE] = {0};
+  };
+
+  enum Event {
+    RX_NEW_PACKET,
+    RX_OVERFLOW,
+  };
+
+  using EventHandler = void (*)(Event event, void* context);
+
 private:
-  enum class Event {
+  enum class InternalEvent {
     INTERRUPT,
     RX_DMA_COMPLETE,
   };
@@ -243,13 +260,19 @@ private:
 
   Mode mode_;
 
+  EventHandler eventHandler_;
+  void* eventHandlerContext_;
+
   // State and event processing
-  RingBuffer<Event, 16> events_;
+  RingBuffer<InternalEvent, 16> events_;
   State state_ = State::IDLE;
 
-  // Packet RX state
-  uint16_t packetHeader_[6];
-  uint8_t frameData_[1536];
+  static const size_t RX_PACKET_BUFFER_SIZE = 8;
+
+  FreeListBuffer<Packet, RX_PACKET_BUFFER_SIZE> rxPacketBuffer_;
+  Packet* currentRxPacket_ = nullptr;
+  uint8_t devNullFrame_;
+  uint16_t devNullHeader_[PACKET_HEADER_SIZE];
 
   uint8_t generateHeaderByte(Opcode opcode, ControlRegAddress addr);
 
@@ -259,11 +282,11 @@ private:
   void initializeMAC();
   void initializePHY();
 
-  void handleInterrupt() { events_.push(Event::INTERRUPT); }
+  void handleInterrupt() { events_.push(InternalEvent::INTERRUPT); }
   void handleRxDMAEvent(DMA::StreamEvent event) {
     switch (event.type) {
     case DMA::StreamEventType::TRANSFER_COMPLETE:
-      events_.push(Event::RX_DMA_COMPLETE);
+      events_.push(InternalEvent::RX_DMA_COMPLETE);
       break;
     }
   }
@@ -272,11 +295,14 @@ private:
   void receivePacketCleanup();
 
 public:
+  RingBuffer<Packet*, RX_PACKET_BUFFER_SIZE> rxBuffer;
+
   ENC28J60() {}
 
   void enable(SPI* spi, GPIO* gpioCS, int pinCS, GPIO* gpioInt, int pinInt,
               DMA* dmaTx, int dmaStreamTx, int dmaChannelTx, DMA* dmaRx,
-              int dmaStreamRx, int dmaChannelRx, Mode mode);
+              int dmaStreamRx, int dmaChannelRx, Mode mode,
+              EventHandler eventHandler, void* eventHandlerContext);
 
   void process();
 
@@ -290,6 +316,8 @@ public:
     setETHRegBitField(ControlRegBank::BANK_0, ControlRegAddress::EIE,
                       EIE_INTIE | ENC28J60::EIE_PKTIE);
   }
+
+  void freeRxPacket(Packet* packet) { rxPacketBuffer_.free(packet); }
 
   // Low-level interface
   void setETHRegBitField(ControlRegBank bank, ControlRegAddress addr,
