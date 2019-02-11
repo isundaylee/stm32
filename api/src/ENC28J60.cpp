@@ -2,6 +2,15 @@
 
 #include <USART.h>
 
+static const uint16_t CONFIG_ERXST = 0x0000;
+static const uint16_t CONFIG_ERXND = 0x0FFF;
+
+uint8_t lowByte(uint16_t num) { return (num & 0x00FF); }
+uint8_t highByte(uint16_t num) { return (num & 0xFF00) >> 8; }
+uint16_t mergeBytes(uint8_t low, uint8_t high) {
+  return ((static_cast<uint16_t>(high) << 8) + low);
+}
+
 uint8_t ENC28J60::generateHeaderByte(Opcode opcode, ControlRegAddress addr) {
   return (static_cast<uint8_t>(opcode) << 5) + static_cast<uint8_t>(addr);
 }
@@ -158,14 +167,22 @@ void ENC28J60::initializeMAC() {
 }
 
 void ENC28J60::initializeETH() {
-  writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXSTL, 0x00);
-  writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXSTH, 0x00);
-  writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXNDL, 0xFF);
-  writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXNDH, 0x0F);
-  writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERDPTL, 0x00);
-  writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERDPTH, 0x00);
-  writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXRDPTL, 0x00);
-  writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXRDPTH, 0x00);
+  writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXSTL,
+                  lowByte(CONFIG_ERXST));
+  writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXSTH,
+                  highByte(CONFIG_ERXST));
+  writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXNDL,
+                  lowByte(CONFIG_ERXND));
+  writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXNDH,
+                  highByte(CONFIG_ERXND));
+  writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERDPTL,
+                  lowByte(CONFIG_ERXST));
+  writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERDPTH,
+                  highByte(CONFIG_ERXST));
+  writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXRDPTL,
+                  lowByte(CONFIG_ERXND));
+  writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXRDPTH,
+                  highByte(CONFIG_ERXND));
 
   writeControlReg(ControlRegBank::BANK_1, ControlRegAddress::ERXFCON, 0x00);
 
@@ -272,12 +289,14 @@ void ENC28J60::receivePacketCleanup() {
   uint16_t* packetHeader =
       (!!currentRxPacket_ ? currentRxPacket_->header : devNullHeader_);
 
+  uint16_t newERXRDPT = mergeBytes(packetHeader[0], packetHeader[1]);
+  // ENC28J60 errata issue 14
+  newERXRDPT = (newERXRDPT == CONFIG_ERXST ? CONFIG_ERXND : newERXRDPT - 1);
+
   writeControlReg(ENC28J60::ControlRegBank::BANK_0,
-                  ENC28J60::ControlRegAddress::ERXRDPTL,
-                  static_cast<uint8_t>(packetHeader[0]));
+                  ENC28J60::ControlRegAddress::ERXRDPTL, lowByte(newERXRDPT));
   writeControlReg(ENC28J60::ControlRegBank::BANK_0,
-                  ENC28J60::ControlRegAddress::ERXRDPTH,
-                  static_cast<uint8_t>(packetHeader[1]));
+                  ENC28J60::ControlRegAddress::ERXRDPTH, highByte(newERXRDPT));
   setETHRegBitField(ENC28J60::ControlRegBank::BANK_0,
                     ENC28J60::ControlRegAddress::ECON2, ENC28J60::ECON2_PKTDEC);
 
@@ -336,7 +355,6 @@ void ENC28J60::process() {
 
     uint8_t eir =
         readETHReg(ControlRegBank::BANK_DONT_CARE, ControlRegAddress::EIR);
-
     if (BIT_IS_SET(eir, EIR_RXERIF)) {
       if (!!eventHandler_) {
         eventHandler_(Event::RX_CHIP_OVERFLOW, eventHandlerContext_);
