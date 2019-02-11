@@ -1,5 +1,7 @@
 #include "ENC28J60.h"
 
+#include <USART.h>
+
 uint8_t ENC28J60::generateHeaderByte(Opcode opcode, ControlRegAddress addr) {
   return (static_cast<uint8_t>(opcode) << 5) + static_cast<uint8_t>(addr);
 }
@@ -7,7 +9,7 @@ uint8_t ENC28J60::generateHeaderByte(Opcode opcode, ControlRegAddress addr) {
 void ENC28J60::selectControlRegBank(ControlRegBank bank) {
   static auto currentBank = ControlRegBank::BANK_0;
 
-  if (currentBank == bank) {
+  if ((currentBank == bank) || (bank == ControlRegBank::BANK_DONT_CARE)) {
     return;
   } else {
     currentBank = bank;
@@ -300,8 +302,9 @@ void ENC28J60::process() {
     switch (event) {
     case InternalEvent::INTERRUPT: {
       if (state_ == State::IDLE) {
-        state_ = State::RX_HEADER;
+        state_ = State::CHECK_INTERRUPT;
       }
+
       break;
     }
 
@@ -324,9 +327,34 @@ void ENC28J60::process() {
     break;
   }
 
+  case State::CHECK_INTERRUPT: {
+    if (gpioInt_->get(pinInt_)) {
+      // INT is cleared (high)
+      state_ = State::IDLE;
+    }
+
+    uint8_t eir =
+        readETHReg(ControlRegBank::BANK_DONT_CARE, ControlRegAddress::EIR);
+
+    if (BIT_IS_SET(eir, EIR_PKTIF)) {
+      state_ = State::RX_HEADER;
+    }
+
+    if (BIT_IS_SET(eir, EIR_RXERIF)) {
+      if (!!eventHandler_) {
+        eventHandler_(Event::RX_CHIP_OVERFLOW, eventHandlerContext_);
+      }
+
+      clearETHRegBitField(ControlRegBank::BANK_DONT_CARE,
+                          ControlRegAddress::EIR, EIR_RXERIF);
+    }
+
+    break;
+  }
+
   case State::RX_HEADER: {
     if (!receivePacketHeader()) {
-      state_ = State::IDLE;
+      state_ = State::CHECK_INTERRUPT;
     } else {
       state_ = State::RX_FRAME_PENDING;
     }
@@ -336,7 +364,7 @@ void ENC28J60::process() {
 
   case State::RX_FRAME_DONE: {
     receivePacketCleanup();
-    state_ = State::RX_HEADER;
+    state_ = State::CHECK_INTERRUPT;
 
     break;
   }

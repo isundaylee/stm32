@@ -15,6 +15,7 @@
 enum class Event {
   ETHERNET_RX_NEW_PACKET,
   ETHERNET_RX_OVERFLOW,
+  ETHERNET_RX_CHIP_OVERFLOW,
 };
 
 enum class State {
@@ -56,6 +57,11 @@ void handleEthernetEvent(ENC28J60::Event event, void*) {
 
   case ENC28J60::Event::RX_OVERFLOW: {
     events.push(Event::ETHERNET_RX_OVERFLOW);
+    break;
+  }
+
+  case ENC28J60::Event::RX_CHIP_OVERFLOW: {
+    events.push(Event::ETHERNET_RX_CHIP_OVERFLOW);
     break;
   }
   }
@@ -109,6 +115,13 @@ static void processEvents() {
     case Event::ETHERNET_RX_OVERFLOW: {
 #if PRINT_PACKET_INDICATOR
       USART_1.write("O");
+#endif
+      break;
+    }
+
+    case Event::ETHERNET_RX_CHIP_OVERFLOW: {
+#if PRINT_PACKET_INDICATOR
+      USART_1.write("C");
 #endif
       break;
     }

@@ -21,6 +21,7 @@ public:
     BANK_1,
     BANK_2,
     BANK_3,
+    BANK_DONT_CARE,
   };
 
   enum class ControlRegAddress {
@@ -185,6 +186,13 @@ public:
   static const uint8_t EIE_TXERIE = 0b00000010;
   static const uint8_t EIE_RXERIE = 0b00000001;
 
+  static const uint8_t EIR_PKTIF = 0b01000000;
+  static const uint8_t EIR_DMAIF = 0b00100000;
+  static const uint8_t EIR_LINKIF = 0b00010000;
+  static const uint8_t EIR_TXIF = 0b00001000;
+  static const uint8_t EIR_TXERIF = 0b00000010;
+  static const uint8_t EIR_RXERIF = 0b00000001;
+
   static const uint8_t MACON1_TXPAUS = 0b00001000;
   static const uint8_t MACON1_RXPAUS = 0b00000100;
   static const uint8_t MACON1_PASSALL = 0b00000010;
@@ -225,6 +233,7 @@ public:
   enum Event {
     RX_NEW_PACKET,
     RX_OVERFLOW,
+    RX_CHIP_OVERFLOW,
   };
 
   using EventHandler = void (*)(Event event, void* context);
@@ -237,6 +246,7 @@ private:
 
   enum class State {
     IDLE,
+    CHECK_INTERRUPT,
     RX_HEADER,
     RX_FRAME_PENDING,
     RX_FRAME_DONE,
@@ -314,7 +324,7 @@ public:
     setETHRegBitField(ControlRegBank::BANK_0, ControlRegAddress::ECON1,
                       ECON1_RXEN);
     setETHRegBitField(ControlRegBank::BANK_0, ControlRegAddress::EIE,
-                      EIE_INTIE | ENC28J60::EIE_PKTIE);
+                      EIE_INTIE | EIE_PKTIE | EIE_RXERIE);
   }
 
   void freeRxPacket(Packet* packet) { rxPacketBuffer_.free(packet); }
