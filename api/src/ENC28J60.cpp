@@ -331,14 +331,11 @@ void ENC28J60::process() {
     if (gpioInt_->get(pinInt_)) {
       // INT is cleared (high)
       state_ = State::IDLE;
+      break;
     }
 
     uint8_t eir =
         readETHReg(ControlRegBank::BANK_DONT_CARE, ControlRegAddress::EIR);
-
-    if (BIT_IS_SET(eir, EIR_PKTIF)) {
-      state_ = State::RX_HEADER;
-    }
 
     if (BIT_IS_SET(eir, EIR_RXERIF)) {
       if (!!eventHandler_) {
@@ -348,6 +345,10 @@ void ENC28J60::process() {
       clearETHRegBitField(ControlRegBank::BANK_DONT_CARE,
                           ControlRegAddress::EIR, EIR_RXERIF);
     }
+
+    // We should always try to do an Rx even regardless of the value of
+    // EIR_PKTIF. See ENC28J60 errata issue 6.
+    state_ = State::RX_HEADER;
 
     break;
   }
