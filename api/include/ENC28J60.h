@@ -246,10 +246,7 @@ private:
 
   enum class State {
     IDLE,
-    CHECK_INTERRUPT,
-    RX_HEADER,
     RX_FRAME_PENDING,
-    RX_FRAME_DONE,
   };
 
   SPI* spi_;
@@ -303,6 +300,11 @@ private:
 
   bool receivePacketHeader();
   void receivePacketCleanup();
+  
+  void postEvent(Event event);
+
+  void transitionToIdle();
+  void handleInterruptEvent();
 
 public:
   RingBuffer<Packet*, RX_PACKET_BUFFER_SIZE> rxBuffer;

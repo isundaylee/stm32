@@ -185,7 +185,6 @@ void ENC28J60::initializeETH() {
                   highByte(CONFIG_ERXND));
 
   writeControlReg(ControlRegBank::BANK_1, ControlRegAddress::ERXFCON, 0x00);
-
   WAIT_UNTIL(
       BIT_IS_SET(readETHReg(ControlRegBank::BANK_0, ControlRegAddress::ESTAT),
                  0b00000001));
@@ -281,6 +280,12 @@ bool ENC28J60::receivePacketHeader() {
   return true;
 }
 
+void ENC28J60::postEvent(Event event) {
+  if (!!eventHandler_) {
+    eventHandler_(event, eventHandlerContext_);
+  }
+}
+
 void ENC28J60::receivePacketCleanup() {
   readBufferMemoryEnd();
   SPI_2.disableRxDMA();
@@ -304,87 +309,76 @@ void ENC28J60::receivePacketCleanup() {
     rxBuffer.push(currentRxPacket_);
   }
 
-  if (!!eventHandler_) {
-    eventHandler_((!!currentRxPacket_) ? Event::RX_NEW_PACKET
-                                       : Event::RX_OVERFLOW,
-                  eventHandlerContext_);
-  }
+  postEvent((!!currentRxPacket_) ? Event::RX_NEW_PACKET : Event::RX_OVERFLOW);
 
   currentRxPacket_ = nullptr;
 }
 
-void ENC28J60::process() {
-  while (!events_.empty()) {
-    InternalEvent event{};
-    events_.pop(event);
+void ENC28J60::transitionToIdle() {
+  if (!gpioInt_->get(pinInt_)) {
+    // INT is still on (low). We need to repost the INTERRUPT event.
+    events_.push(InternalEvent::INTERRUPT);
+  }
 
+  state_ = State::IDLE;
+}
+
+void ENC28J60::handleInterruptEvent() {
+  uint8_t eir =
+      readETHReg(ControlRegBank::BANK_DONT_CARE, ControlRegAddress::EIR);
+  if (BIT_IS_SET(eir, EIR_RXERIF)) {
+    postEvent(Event::RX_CHIP_OVERFLOW);
+    clearETHRegBitField(ControlRegBank::BANK_DONT_CARE, ControlRegAddress::EIR,
+                        EIR_RXERIF);
+  }
+
+  // We should always try to do an Rx even regardless of the value of
+  // EIR_PKTIF. See ENC28J60 errata issue 6.
+  if (receivePacketHeader()) {
+    state_ = State::RX_FRAME_PENDING;
+  } else {
+    transitionToIdle();
+  }
+}
+
+void ENC28J60::process() {
+  if (events_.empty()) {
+    return;
+  }
+
+  InternalEvent event{};
+  events_.pop(event);
+
+  switch (state_) {
+  case State::IDLE: {
     switch (event) {
     case InternalEvent::INTERRUPT: {
-      if (state_ == State::IDLE) {
-        state_ = State::CHECK_INTERRUPT;
-      }
-
+      handleInterruptEvent();
       break;
     }
 
     case InternalEvent::RX_DMA_COMPLETE: {
-      if (state_ == State::RX_FRAME_PENDING) {
-        state_ = State::RX_FRAME_DONE;
-      } else {
-        // TODO: Error handling
-      }
-
+      // TODO: Assert false
       break;
     }
     }
   }
 
-  switch (state_) {
-  case State::IDLE:
   case State::RX_FRAME_PENDING: {
-    // Nothing to do
-    break;
-  }
+    switch (event) {
+    case InternalEvent::RX_DMA_COMPLETE: {
+      receivePacketCleanup();
+      transitionToIdle();
 
-  case State::CHECK_INTERRUPT: {
-    if (gpioInt_->get(pinInt_)) {
-      // INT is cleared (high)
-      state_ = State::IDLE;
       break;
     }
 
-    uint8_t eir =
-        readETHReg(ControlRegBank::BANK_DONT_CARE, ControlRegAddress::EIR);
-    if (BIT_IS_SET(eir, EIR_RXERIF)) {
-      if (!!eventHandler_) {
-        eventHandler_(Event::RX_CHIP_OVERFLOW, eventHandlerContext_);
-      }
-
-      clearETHRegBitField(ControlRegBank::BANK_DONT_CARE,
-                          ControlRegAddress::EIR, EIR_RXERIF);
+    case InternalEvent::INTERRUPT: {
+      // Don't care
+      // TODO: Can we assert false here?
+      break;
     }
-
-    // We should always try to do an Rx even regardless of the value of
-    // EIR_PKTIF. See ENC28J60 errata issue 6.
-    state_ = State::RX_HEADER;
-
-    break;
-  }
-
-  case State::RX_HEADER: {
-    if (!receivePacketHeader()) {
-      state_ = State::CHECK_INTERRUPT;
-    } else {
-      state_ = State::RX_FRAME_PENDING;
     }
-
-    break;
-  }
-
-  case State::RX_FRAME_DONE: {
-    receivePacketCleanup();
-    state_ = State::CHECK_INTERRUPT;
-
     break;
   }
   }
