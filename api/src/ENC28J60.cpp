@@ -2,6 +2,8 @@
 
 #include <USART.h>
 
+namespace enc28j60 {
+
 static const uint16_t CONFIG_ERXST = 0x0000;
 static const uint16_t CONFIG_ERXND = 0x0FFF;
 
@@ -298,12 +300,12 @@ void ENC28J60::receivePacketCleanup() {
   // ENC28J60 errata issue 14
   newERXRDPT = (newERXRDPT == CONFIG_ERXST ? CONFIG_ERXND : newERXRDPT - 1);
 
-  writeControlReg(ENC28J60::ControlRegBank::BANK_0,
-                  ENC28J60::ControlRegAddress::ERXRDPTL, lowByte(newERXRDPT));
-  writeControlReg(ENC28J60::ControlRegBank::BANK_0,
-                  ENC28J60::ControlRegAddress::ERXRDPTH, highByte(newERXRDPT));
-  setETHRegBitField(ENC28J60::ControlRegBank::BANK_0,
-                    ENC28J60::ControlRegAddress::ECON2, ENC28J60::ECON2_PKTDEC);
+  writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXRDPTL,
+                  lowByte(newERXRDPT));
+  writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXRDPTH,
+                  highByte(newERXRDPT));
+  setETHRegBitField(ControlRegBank::BANK_0, ControlRegAddress::ECON2,
+                    ECON2_PKTDEC);
 
   if (!!currentRxPacket_) {
     rxBuffer.push(currentRxPacket_);
@@ -383,3 +385,5 @@ void ENC28J60::process() {
   }
   }
 }
+
+}; // namespace enc28j60

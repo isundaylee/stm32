@@ -22,7 +22,7 @@ enum class State {
   IDLE,
 };
 
-ENC28J60 eth;
+enc28j60::ENC28J60 eth;
 
 static RingBuffer<Event, 16> events;
 static auto state = State::IDLE;
@@ -48,19 +48,19 @@ static void dumpPacketHeader(ENC28J60::Packet* packet) {
 }
 #endif
 
-void handleEthernetEvent(ENC28J60::Event event, void*) {
+void handleEthernetEvent(enc28j60::Event event, void*) {
   switch (event) {
-  case ENC28J60::Event::RX_NEW_PACKET: {
+  case enc28j60::Event::RX_NEW_PACKET: {
     events.push(Event::ETHERNET_RX_NEW_PACKET);
     break;
   }
 
-  case ENC28J60::Event::RX_OVERFLOW: {
+  case enc28j60::Event::RX_OVERFLOW: {
     events.push(Event::ETHERNET_RX_OVERFLOW);
     break;
   }
 
-  case ENC28J60::Event::RX_CHIP_OVERFLOW: {
+  case enc28j60::Event::RX_CHIP_OVERFLOW: {
     events.push(Event::ETHERNET_RX_CHIP_OVERFLOW);
     break;
   }
@@ -69,7 +69,7 @@ void handleEthernetEvent(ENC28J60::Event event, void*) {
 
 static void initializeEthernet() {
   eth.enable(&SPI_2, &GPIO_B, 12, &GPIO_C, 9, &DMA_1, 4, 0, &DMA_1, 3, 0,
-             ENC28J60::Mode::FULL_DUPLEX, handleEthernetEvent, nullptr);
+             enc28j60::Mode::FULL_DUPLEX, handleEthernetEvent, nullptr);
 
   USART_1.write("Waiting for link");
   while (!eth.linkIsUp()) {
@@ -84,7 +84,7 @@ static void initializeEthernet() {
 
 static void processEthernetRxPackets() {
   while (!eth.rxBuffer.empty()) {
-    ENC28J60::Packet* packet{};
+    enc28j60::Packet* packet{};
     eth.rxBuffer.pop(packet);
 
 #if PRINT_PACKET_INDICATOR
