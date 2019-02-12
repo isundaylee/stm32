@@ -54,7 +54,7 @@ const char* DecString(uint32_t n, size_t len /* = 0 */) {
 
   if (len != 0) {
     while (static_cast<size_t>(bufferEnd - p) < (len + 2)) {
-      *(p--) = '0';
+      *(p--) = ' ';
     }
   }
 
