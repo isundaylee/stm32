@@ -316,16 +316,16 @@ void ENC28J60::receivePacketCleanup() {
   currentRxPacket_ = nullptr;
 }
 
-void ENC28J60::transitionToIdle() {
+ENC28J60::FSM::State ENC28J60::transitionToIdle() {
   if (!gpioInt_->get(pinInt_)) {
     // INT is still on (low). We need to repost the INTERRUPT event.
-    events_.push(InternalEvent::INTERRUPT);
+    fsm_.pushEvent(FSM::Event::INTERRUPT);
   }
 
-  state_ = State::IDLE;
+  return FSM::State::IDLE;
 }
 
-void ENC28J60::handleInterruptEvent() {
+ENC28J60::FSM::State ENC28J60::handleInterruptEvent() {
   uint8_t eir =
       readETHReg(ControlRegBank::BANK_DONT_CARE, ControlRegAddress::EIR);
   if (BIT_IS_SET(eir, EIR_RXERIF)) {
@@ -337,53 +337,48 @@ void ENC28J60::handleInterruptEvent() {
   // We should always try to do an Rx even regardless of the value of
   // EIR_PKTIF. See ENC28J60 errata issue 6.
   if (receivePacketHeader()) {
-    state_ = State::RX_FRAME_PENDING;
+    return FSM::State::RX_FRAME_PENDING;
   } else {
-    transitionToIdle();
+    return transitionToIdle();
   }
 }
 
-void ENC28J60::process() {
-  if (events_.empty()) {
-    return;
-  }
-
-  InternalEvent event{};
-  events_.pop(event);
-
-  switch (state_) {
-  case State::IDLE: {
+ENC28J60::FSM::State ENC28J60::transition(FSM::State state, FSM::Event event) {
+  switch (state) {
+  case FSM::State::IDLE: {
     switch (event) {
-    case InternalEvent::INTERRUPT: {
-      handleInterruptEvent();
-      break;
+    case FSM::Event::INTERRUPT: {
+      return handleInterruptEvent();
     }
 
-    case InternalEvent::RX_DMA_COMPLETE: {
+    case FSM::Event::RX_DMA_COMPLETE: {
       // TODO: Assert false
-      break;
+      return state;
     }
     }
   }
 
-  case State::RX_FRAME_PENDING: {
+  case FSM::State::RX_FRAME_PENDING: {
     switch (event) {
-    case InternalEvent::RX_DMA_COMPLETE: {
+    case FSM::Event::RX_DMA_COMPLETE: {
       receivePacketCleanup();
-      transitionToIdle();
-
-      break;
+      return transitionToIdle();
     }
 
-    case InternalEvent::INTERRUPT: {
+    case FSM::Event::INTERRUPT: {
       // Don't care
       // TODO: Can we assert false here?
-      break;
+      return state;
     }
     }
     break;
   }
   }
+
+  // Should never get here as long as we're thorough above
+  return state;
 }
+
+void ENC28J60::process() { fsm_.processOneEvent(); }
 
 }; // namespace enc28j60

@@ -6,6 +6,7 @@
 #include <GPIO.h>
 #include <SPI.h>
 
+#include <EmbeddedFSM.h>
 #include <FreeListBuffer.h>
 #include <RingBuffer.h>
 
@@ -30,16 +31,6 @@ struct Packet {
 
 class ENC28J60 {
 private:
-  enum class InternalEvent {
-    INTERRUPT,
-    RX_DMA_COMPLETE,
-  };
-
-  enum class State {
-    IDLE,
-    RX_FRAME_PENDING,
-  };
-
   SPI* spi_;
 
   GPIO* gpioCS_;
@@ -61,10 +52,6 @@ private:
   EventHandler eventHandler_;
   void* eventHandlerContext_;
 
-  // State and event processing
-  RingBuffer<InternalEvent, 16> events_;
-  State state_ = State::IDLE;
-
   static const size_t RX_PACKET_BUFFER_SIZE = 8;
 
   FreeListBuffer<Packet, RX_PACKET_BUFFER_SIZE> rxPacketBuffer_;
@@ -80,11 +67,11 @@ private:
   void initializeMAC();
   void initializePHY();
 
-  void handleInterrupt() { events_.push(InternalEvent::INTERRUPT); }
+  void handleInterrupt() { fsm_.pushEvent(FSM::Event::INTERRUPT); }
   void handleRxDMAEvent(DMA::StreamEvent event) {
     switch (event.type) {
     case DMA::StreamEventType::TRANSFER_COMPLETE:
-      events_.push(InternalEvent::RX_DMA_COMPLETE);
+      fsm_.pushEvent(FSM::Event::RX_DMA_COMPLETE);
       break;
     }
   }
@@ -94,13 +81,28 @@ private:
 
   void postEvent(Event event);
 
-  void transitionToIdle();
-  void handleInterruptEvent();
+  // State machine
+  enum class FSMEvent {
+    INTERRUPT,
+    RX_DMA_COMPLETE,
+  };
+
+  enum class FSMState {
+    IDLE,
+    RX_FRAME_PENDING,
+  };
+
+  using FSM = EmbeddedFSM<ENC28J60, FSMState, FSMEvent>;
+  FSM fsm_;
+  FSM::State transition(FSM::State, FSM::Event);
+
+  FSM::State transitionToIdle();
+  FSM::State handleInterruptEvent();
 
 public:
   RingBuffer<Packet*, RX_PACKET_BUFFER_SIZE> rxBuffer;
 
-  ENC28J60() {}
+  ENC28J60() : fsm_(FSM::State::IDLE, *this, &ENC28J60::transition) {}
 
   void enable(SPI* spi, GPIO* gpioCS, int pinCS, GPIO* gpioInt, int pinInt,
               DMA* dmaTx, int dmaStreamTx, int dmaChannelTx, DMA* dmaRx,
