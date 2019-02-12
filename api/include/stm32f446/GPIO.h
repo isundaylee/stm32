@@ -46,8 +46,10 @@ public:
   void enable();
 
   void setMode(int pin, PinMode mode, uint32_t alternate = 0);
-  void enableExternalInterrupt(int pin, TriggerDirection direction,
+  void setupExternalInterrupt(int pin, TriggerDirection direction,
                                InterruptHandler handler, void* handlerContext);
+  void enableExternalInterrupt(int pin);
+  void disableExternalInterrupt(int pin);
 
   void set(int pin) { gpio_->BSRR = (1UL << pin); }
   void clear(int pin) { gpio_->BSRR = (1UL << (pin + 16)); }

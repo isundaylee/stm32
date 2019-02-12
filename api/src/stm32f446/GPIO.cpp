@@ -82,9 +82,9 @@ void GPIO::setMode(int pin, PinMode mode, uint32_t alternate /* = 0 */) {
   gpio_->AFR[pin / 8] |= (alternate << (4 * (pin % 8)));
 }
 
-void GPIO::enableExternalInterrupt(int pin, TriggerDirection direction,
-                                   InterruptHandler handler,
-                                   void* handlerContext) {
+void GPIO::setupExternalInterrupt(int pin, TriggerDirection direction,
+                                  InterruptHandler handler,
+                                  void* handlerContext) {
   BIT_SET(RCC->APB2ENR, RCC_APB2ENR_SYSCFGEN);
 
   interruptHandlers_[pin] = handler;
@@ -115,7 +115,9 @@ void GPIO::enableExternalInterrupt(int pin, TriggerDirection direction,
     EXTI->FTSR |= (1U << pin);
     break;
   }
+}
 
+void GPIO::enableExternalInterrupt(int pin) {
   if (pin == 0) {
     NVIC_EnableIRQ(EXTI0_IRQn);
   } else if (pin == 1) {
@@ -130,5 +132,23 @@ void GPIO::enableExternalInterrupt(int pin, TriggerDirection direction,
     NVIC_EnableIRQ(EXTI9_5_IRQn);
   } else {
     NVIC_EnableIRQ(EXTI15_10_IRQn);
+  }
+}
+
+void GPIO::disableExternalInterrupt(int pin) {
+  if (pin == 0) {
+    NVIC_DisableIRQ(EXTI0_IRQn);
+  } else if (pin == 1) {
+    NVIC_DisableIRQ(EXTI1_IRQn);
+  } else if (pin == 2) {
+    NVIC_DisableIRQ(EXTI2_IRQn);
+  } else if (pin == 3) {
+    NVIC_DisableIRQ(EXTI3_IRQn);
+  } else if (pin == 4) {
+    NVIC_DisableIRQ(EXTI4_IRQn);
+  } else if (pin <= 9) {
+    NVIC_DisableIRQ(EXTI9_5_IRQn);
+  } else {
+    NVIC_DisableIRQ(EXTI15_10_IRQn);
   }
 }

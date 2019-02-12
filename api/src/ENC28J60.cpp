@@ -223,8 +223,9 @@ void ENC28J60::enable(SPI* spi, GPIO* gpioCS, int pinCS, GPIO* gpioInt,
   eventHandler_ = eventHandler;
   eventHandlerContext_ = eventHandlerContext;
 
-  GPIO_C.enableExternalInterrupt(9, GPIO::TriggerDirection::FALLING_EDGE,
-                                 enc28j60HandleInterruptWrapper, this);
+  gpioInt_->setupExternalInterrupt(pinInt_,
+                                   GPIO::TriggerDirection::FALLING_EDGE,
+                                   enc28j60HandleInterruptWrapper, this);
 
   initializeETH();
   initializeMAC();
@@ -288,7 +289,11 @@ void ENC28J60::postEvent(Event event) {
   }
 }
 
-void ENC28J60::receivePacketCleanup() {
+////////////////////////////////////////////////////////////////////////////////
+// FSM goes round and round...
+////////////////////////////////////////////////////////////////////////////////
+
+void ENC28J60::fsmActionRxCleanup() {
   readBufferMemoryEnd();
   SPI_2.disableRxDMA();
   SPI_2.disableTxDMA();
@@ -314,20 +319,14 @@ void ENC28J60::receivePacketCleanup() {
   postEvent((!!currentRxPacket_) ? Event::RX_NEW_PACKET : Event::RX_OVERFLOW);
 
   currentRxPacket_ = nullptr;
+
+  fsm_.pushEvent(FSMEvent::INTERRUPT);
 }
 
-ENC28J60::FSM::State ENC28J60::transitionToIdle() {
-  if (!gpioInt_->get(pinInt_)) {
-    // INT is still on (low). We need to repost the INTERRUPT event.
-    fsm_.pushEvent(FSM::Event::INTERRUPT);
-  }
-
-  return FSM::State::IDLE;
-}
-
-ENC28J60::FSM::State ENC28J60::handleInterruptEvent() {
+void ENC28J60::fsmActionCheckEIR() {
   uint8_t eir =
       readETHReg(ControlRegBank::BANK_DONT_CARE, ControlRegAddress::EIR);
+
   if (BIT_IS_SET(eir, EIR_RXERIF)) {
     postEvent(Event::RX_CHIP_OVERFLOW);
     clearETHRegBitField(ControlRegBank::BANK_DONT_CARE, ControlRegAddress::EIR,
@@ -337,47 +336,25 @@ ENC28J60::FSM::State ENC28J60::handleInterruptEvent() {
   // We should always try to do an Rx even regardless of the value of
   // EIR_PKTIF. See ENC28J60 errata issue 6.
   if (receivePacketHeader()) {
-    return FSM::State::RX_FRAME_PENDING;
+    fsm_.pushEvent(FSMEvent::RX_HEADER_READ);
   } else {
-    return transitionToIdle();
+    fsm_.pushEvent(FSMEvent::RX_ALL_DONE);
   }
 }
 
-ENC28J60::FSM::State ENC28J60::transition(FSM::State state, FSM::Event event) {
-  switch (state) {
-  case FSM::State::IDLE: {
-    switch (event) {
-    case FSM::Event::INTERRUPT: {
-      return handleInterruptEvent();
-    }
-
-    case FSM::Event::RX_DMA_COMPLETE: {
-      // TODO: Assert false
-      return state;
-    }
-    }
-  }
-
-  case FSM::State::RX_FRAME_PENDING: {
-    switch (event) {
-    case FSM::Event::RX_DMA_COMPLETE: {
-      receivePacketCleanup();
-      return transitionToIdle();
-    }
-
-    case FSM::Event::INTERRUPT: {
-      // Don't care
-      // TODO: Can we assert false here?
-      return state;
-    }
-    }
-    break;
-  }
-  }
-
-  // Should never get here as long as we're thorough above
-  return state;
+void ENC28J60::fsmActionEnableInt() {
+  gpioInt_->enableExternalInterrupt(pinInt_);
 }
+
+/* static */ ENC28J60::FSM::Transition ENC28J60::fsmTransitions_[] = {
+    // clang-format off
+    {FSMState::IDLE,        FSMEvent::INTERRUPT,        &ENC28J60::fsmActionCheckEIR,   FSMState::EIR_CHECKED},
+    {FSMState::EIR_CHECKED, FSMEvent::RX_HEADER_READ,   nullptr,                        FSMState::RX_PENDING},
+    {FSMState::EIR_CHECKED, FSMEvent::RX_ALL_DONE,      &ENC28J60::fsmActionEnableInt,  FSMState::IDLE},
+    {FSMState::RX_PENDING,  FSMEvent::RX_DMA_COMPLETE,  &ENC28J60::fsmActionRxCleanup,  FSMState::IDLE},
+    FSM::TransitionTerminator,
+    // clang-format on
+};
 
 void ENC28J60::process() { fsm_.processOneEvent(); }
 

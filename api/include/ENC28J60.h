@@ -67,7 +67,14 @@ private:
   void initializeMAC();
   void initializePHY();
 
-  void handleInterrupt() { fsm_.pushEvent(FSM::Event::INTERRUPT); }
+  void handleInterrupt() {
+    // We handle interrupt one at a time. 
+    // Inspiration taken from the Linux kernel driver.
+    gpioInt_->disableExternalInterrupt(pinInt_);
+
+    fsm_.pushEvent(FSM::Event::INTERRUPT);
+  }
+  
   void handleRxDMAEvent(DMA::StreamEvent event) {
     switch (event.type) {
     case DMA::StreamEventType::TRANSFER_COMPLETE:
@@ -77,32 +84,36 @@ private:
   }
 
   bool receivePacketHeader();
-  void receivePacketCleanup();
 
   void postEvent(Event event);
 
   // State machine
   enum class FSMEvent {
     INTERRUPT,
+    RX_HEADER_READ,
     RX_DMA_COMPLETE,
+    RX_ALL_DONE,
   };
 
   enum class FSMState {
     IDLE,
-    RX_FRAME_PENDING,
+    EIR_CHECKED,
+    RX_PENDING,
   };
 
   using FSM = EmbeddedFSM<ENC28J60, FSMState, FSMEvent>;
   FSM fsm_;
-  FSM::State transition(FSM::State, FSM::Event);
 
-  FSM::State transitionToIdle();
-  FSM::State handleInterruptEvent();
+  void fsmActionCheckEIR(void);
+  void fsmActionRxCleanup(void);
+  void fsmActionEnableInt(void);
+
+  static FSM::Transition fsmTransitions_[];
 
 public:
   RingBuffer<Packet*, RX_PACKET_BUFFER_SIZE> rxBuffer;
 
-  ENC28J60() : fsm_(FSM::State::IDLE, *this, &ENC28J60::transition) {}
+  ENC28J60() : fsm_(FSM::State::IDLE, *this, fsmTransitions_) {}
 
   void enable(SPI* spi, GPIO* gpioCS, int pinCS, GPIO* gpioInt, int pinInt,
               DMA* dmaTx, int dmaStreamTx, int dmaChannelTx, DMA* dmaRx,
@@ -120,6 +131,7 @@ public:
                       ECON1_RXEN);
     setETHRegBitField(ControlRegBank::BANK_0, ControlRegAddress::EIE,
                       EIE_INTIE | EIE_PKTIE | EIE_RXERIE);
+    gpioInt_->enableExternalInterrupt(pinInt_);
   }
 
   void freeRxPacket(Packet* packet) { rxPacketBuffer_.free(packet); }

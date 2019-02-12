@@ -8,19 +8,36 @@ public:
   using State = StateType;
   using Event = EventType;
 
-private:
-  using TransitionFunction = State (Parent::*)(State, Event);
+  using Action = void (Parent::*)(void);
 
+  struct Transition {
+    State fromState;
+    Event event;
+
+    Action action;
+    State toState;
+
+    bool terminator = false;
+  };
+
+  static constexpr Transition TransitionTerminator = {
+      static_cast<State>(0),
+      static_cast<Event>(0),
+      nullptr,
+      static_cast<State>(0),
+      true,
+  };
+
+private:
   RingBuffer<Event, 16> events_;
   State state_;
   Parent& parent_;
-  TransitionFunction transitionFunction_;
+  // TODO: Investigate. How I wish I had std::array...
+  Transition* transitions_;
 
 public:
-  EmbeddedFSM(State initialState, Parent& parent,
-              TransitionFunction transitionFunction)
-      : state_(initialState), parent_(parent),
-        transitionFunction_(transitionFunction) {}
+  EmbeddedFSM(State initialState, Parent& parent, Transition* transitions)
+      : state_(initialState), parent_(parent), transitions_(transitions) {}
 
   bool pushEvent(Event event) { return events_.push(event); }
 
@@ -32,8 +49,18 @@ public:
     Event event{};
     events_.pop(event);
 
-    state_ = (parent_.*transitionFunction_)(state_, event);
+    for (Transition* transition = transitions_; !transition->terminator;
+         transition++) {
+      if ((state_ == transition->fromState) && (event == transition->event)) {
+        if (!!transition->action) {
+          (parent_.*(transition->action))();
+        }
+        state_ = transition->toState;
+        return true;
+      }
+    }
 
+    // TODO: Non-matching??
     return true;
   }
 };
