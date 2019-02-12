@@ -273,8 +273,15 @@ void handleRxDMAEventWrapper(DMA::StreamEvent event, void* context) {
 ////////////////////////////////////////////////////////////////////////////////
 
 bool ENC28J60::receivePacketHeader() {
-  if (readETHReg(ControlRegBank::BANK_1, ControlRegAddress::EPKTCNT) == 0) {
+  uint8_t packetCount =
+      readETHReg(ControlRegBank::BANK_1, ControlRegAddress::EPKTCNT);
+
+  if (packetCount == 0) {
     return false;
+  }
+
+  if (packetCount > stats.maxPKTCNT) {
+    stats.maxPKTCNT = packetCount;
   }
 
   // Allocate the new RX packet
@@ -354,6 +361,11 @@ void ENC28J60::fsmActionRxCleanup() {
 
   if (!!currentRxPacket_) {
     rxBuffer.push(currentRxPacket_);
+
+    stats.rxBytes += currentRxPacket_->frameLength;
+    stats.rxPackets++;
+  } else {
+    stats.rxPacketsLostInDriver++;
   }
 
   postEvent((!!currentRxPacket_) ? Event::RX_NEW_PACKET : Event::RX_OVERFLOW);

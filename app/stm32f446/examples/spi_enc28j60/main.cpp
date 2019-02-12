@@ -3,6 +3,7 @@
 #include <DMA.h>
 #include <GPIO.h>
 #include <SPI.h>
+#include <Timer.h>
 #include <USART.h>
 
 #include <RingBuffer.h>
@@ -10,12 +11,14 @@
 #include "ENC28J60.h"
 
 #define DUMP_PACKET_HEADERS 0
-#define PRINT_PACKET_INDICATOR 1
+#define DUMP_STATS 1
+#define PRINT_PACKET_INDICATOR 0
 
 enum class Event {
   ETHERNET_RX_NEW_PACKET,
   ETHERNET_RX_OVERFLOW,
   ETHERNET_RX_CHIP_OVERFLOW,
+  TIMER_INTERRUPT,
 };
 
 enum class State {
@@ -67,6 +70,8 @@ void handleEthernetEvent(enc28j60::Event event, void*) {
   }
 }
 
+void handleTimerInterrupt() { events.push(Event::TIMER_INTERRUPT); }
+
 static void initializeEthernet() {
   eth.enable(&SPI_2, &GPIO_B, 12, &GPIO_C, 9, &DMA_1, 4, 0, &DMA_1, 3, 0,
              enc28j60::Mode::FULL_DUPLEX, handleEthernetEvent, nullptr);
@@ -80,6 +85,10 @@ static void initializeEthernet() {
   USART_1.write("Link is up!\r\n");
 
   eth.enableRx();
+
+#if DUMP_STATS
+  Timer_2.enable(1000, 16000, handleTimerInterrupt);
+#endif
 }
 
 static void processEthernetRxPackets() {
@@ -123,6 +132,24 @@ static void processEvents() {
 #if PRINT_PACKET_INDICATOR
       USART_1.write("C");
 #endif
+      break;
+    }
+
+    case Event::TIMER_INTERRUPT: {
+      USART_1.write("RxBytes = ");
+      USART_1.write(DecString(eth.stats.rxBytes, 8));
+      USART_1.write(", RxPackets = ");
+      USART_1.write(DecString(eth.stats.rxPackets, 5));
+      USART_1.write(", RxPacketsLostInDriver = ");
+      USART_1.write(DecString(eth.stats.rxPacketsLostInDriver, 5));
+      USART_1.write(", MaxPKTCNT = ");
+      USART_1.write(DecString(eth.stats.maxPKTCNT, 3));
+      USART_1.write(", RxKbps = ");
+      USART_1.write(DecString((eth.stats.rxBytes * 8) >> 10, 2));
+      USART_1.write("\r\n");
+
+      eth.stats.reset();
+
       break;
     }
     }

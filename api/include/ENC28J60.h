@@ -29,6 +29,21 @@ struct Packet {
   uint8_t frame[PACKET_FRAME_SIZE] = {0};
 };
 
+struct Stats {
+  size_t rxPackets = 0;
+  size_t rxBytes = 0;
+  size_t rxPacketsLostInDriver = 0;
+
+  uint8_t maxPKTCNT = 0;
+
+  void reset() {
+    rxPackets = 0;
+    rxBytes = 0;
+    rxPacketsLostInDriver = 0;
+    maxPKTCNT = 0;
+  }
+};
+
 class ENC28J60 {
 private:
   // Peripheral dependencies
@@ -105,6 +120,8 @@ private:
 
 public:
   RingBuffer<Packet*, RX_PACKET_BUFFER_SIZE> rxBuffer;
+
+  Stats stats;
 
   // High-level interface
   ENC28J60() : fsm_(FSM::State::IDLE, *this, fsmTransitions_) {}
