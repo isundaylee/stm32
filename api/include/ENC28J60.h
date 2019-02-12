@@ -10,10 +10,10 @@
 #include <FreeListBuffer.h>
 #include <RingBuffer.h>
 
-void enc28j60HandleInterruptWrapper(void* context);
-void enc28j60HandleRxDMAEventWrapper(DMA::StreamEvent event, void* context);
-
 namespace enc28j60 {
+
+void handleInterruptWrapper(void* context);
+void handleRxDMAEventWrapper(DMA::StreamEvent event, void* context);
 
 enum Event {
   RX_NEW_PACKET,
@@ -31,6 +31,7 @@ struct Packet {
 
 class ENC28J60 {
 private:
+  // Peripheral dependencies
   SPI* spi_;
 
   GPIO* gpioCS_;
@@ -47,11 +48,13 @@ private:
   int dmaStreamRx_;
   int dmaChannelRx_;
 
+  // Configuration
   Mode mode_;
 
   EventHandler eventHandler_;
   void* eventHandlerContext_;
 
+  // Rx packet buffer
   static const size_t RX_PACKET_BUFFER_SIZE = 8;
 
   FreeListBuffer<Packet, RX_PACKET_BUFFER_SIZE> rxPacketBuffer_;
@@ -59,34 +62,24 @@ private:
   uint8_t devNullFrame_;
   uint16_t devNullHeader_[PACKET_HEADER_SIZE];
 
-  uint8_t generateHeaderByte(Opcode opcode, ControlRegAddress addr);
-
   void selectControlRegBank(ControlRegBank bank);
 
+  // Initialization routines
   void initializeETH();
   void initializeMAC();
   void initializePHY();
 
-  void handleInterrupt() {
-    // We handle interrupt one at a time. 
-    // Inspiration taken from the Linux kernel driver.
-    gpioInt_->disableExternalInterrupt(pinInt_);
+  // Interrupt handlers
+  void handleInterrupt();
+  void handleRxDMAEvent(DMA::StreamEvent event);
+  friend void handleInterruptWrapper(void* context);
+  friend void handleRxDMAEventWrapper(DMA::StreamEvent event, void* context);
 
-    fsm_.pushEvent(FSM::Event::INTERRUPT);
-  }
-  
-  void handleRxDMAEvent(DMA::StreamEvent event) {
-    switch (event.type) {
-    case DMA::StreamEventType::TRANSFER_COMPLETE:
-      fsm_.pushEvent(FSM::Event::RX_DMA_COMPLETE);
-      break;
-    }
-  }
-
+  // FSM helper functions
   bool receivePacketHeader();
-
   void postEvent(Event event);
 
+private:
   // State machine
   enum class FSMEvent {
     INTERRUPT,
@@ -113,28 +106,20 @@ private:
 public:
   RingBuffer<Packet*, RX_PACKET_BUFFER_SIZE> rxBuffer;
 
+  // High-level interface
   ENC28J60() : fsm_(FSM::State::IDLE, *this, fsmTransitions_) {}
 
   void enable(SPI* spi, GPIO* gpioCS, int pinCS, GPIO* gpioInt, int pinInt,
               DMA* dmaTx, int dmaStreamTx, int dmaChannelTx, DMA* dmaRx,
               int dmaStreamRx, int dmaChannelRx, Mode mode,
               EventHandler eventHandler, void* eventHandlerContext);
+  void enableRx();
 
   void process();
 
-  bool linkIsUp() {
-    return BIT_IS_SET(readPHYReg(PHYRegAddress::PHSTAT1), PHSTAT1_LLSTAT);
-  }
+  bool linkIsUp();
 
-  void enableRx() {
-    setETHRegBitField(ControlRegBank::BANK_0, ControlRegAddress::ECON1,
-                      ECON1_RXEN);
-    setETHRegBitField(ControlRegBank::BANK_0, ControlRegAddress::EIE,
-                      EIE_INTIE | EIE_PKTIE | EIE_RXERIE);
-    gpioInt_->enableExternalInterrupt(pinInt_);
-  }
-
-  void freeRxPacket(Packet* packet) { rxPacketBuffer_.free(packet); }
+  void freeRxPacket(Packet* packet);
 
   // Low-level interface
   void setETHRegBitField(ControlRegBank bank, ControlRegAddress addr,
@@ -153,10 +138,6 @@ public:
   void readBufferMemory(uint16_t* data, size_t len);
   void readBufferMemoryStart();
   void readBufferMemoryEnd();
-
-  friend void enc28j60HandleInterruptWrapper(void* context);
-  friend void enc28j60HandleRxDMAEventWrapper(DMA::StreamEvent event,
-                                              void* context);
 };
 
 } // namespace enc28j60

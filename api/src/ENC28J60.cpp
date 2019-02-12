@@ -4,16 +4,20 @@
 
 namespace enc28j60 {
 
+////////////////////////////////////////////////////////////////////////////////
+// Low-level interface
+////////////////////////////////////////////////////////////////////////////////
+
 static const uint16_t CONFIG_ERXST = 0x0000;
 static const uint16_t CONFIG_ERXND = 0x0FFF;
 
-uint8_t lowByte(uint16_t num) { return (num & 0x00FF); }
-uint8_t highByte(uint16_t num) { return (num & 0xFF00) >> 8; }
-uint16_t mergeBytes(uint8_t low, uint8_t high) {
+static uint8_t lowByte(uint16_t num) { return (num & 0x00FF); }
+static uint8_t highByte(uint16_t num) { return (num & 0xFF00) >> 8; }
+static uint16_t mergeBytes(uint8_t low, uint8_t high) {
   return ((static_cast<uint16_t>(high) << 8) + low);
 }
 
-uint8_t ENC28J60::generateHeaderByte(Opcode opcode, ControlRegAddress addr) {
+static uint8_t generateHeaderByte(Opcode opcode, ControlRegAddress addr) {
   return (static_cast<uint8_t>(opcode) << 5) + static_cast<uint8_t>(addr);
 }
 
@@ -146,6 +150,10 @@ void ENC28J60::readBufferMemory(uint16_t* data, size_t len) {
   readBufferMemoryEnd();
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// Initialization routines
+////////////////////////////////////////////////////////////////////////////////
+
 void ENC28J60::initializeMAC() {
   writeControlReg(ControlRegBank::BANK_2, ControlRegAddress::MACON1,
                   MACON1_MARXEN | MACON1_TXPAUS | MACON1_RXPAUS);
@@ -196,14 +204,6 @@ void ENC28J60::initializePHY() {
   writePHYReg(PHYRegAddress::PHCON1, PHCON1_PDPXMD);
 }
 
-void enc28j60HandleInterruptWrapper(void* context) {
-  static_cast<ENC28J60*>(context)->handleInterrupt();
-}
-
-void enc28j60HandleRxDMAEventWrapper(DMA::StreamEvent event, void* context) {
-  static_cast<ENC28J60*>(context)->handleRxDMAEvent(event);
-}
-
 void ENC28J60::enable(SPI* spi, GPIO* gpioCS, int pinCS, GPIO* gpioInt,
                       int pinInt, DMA* dmaTx, int dmaStreamTx, int dmaChannelTx,
                       DMA* dmaRx, int dmaStreamRx, int dmaChannelRx, Mode mode,
@@ -225,12 +225,52 @@ void ENC28J60::enable(SPI* spi, GPIO* gpioCS, int pinCS, GPIO* gpioInt,
 
   gpioInt_->setupExternalInterrupt(pinInt_,
                                    GPIO::TriggerDirection::FALLING_EDGE,
-                                   enc28j60HandleInterruptWrapper, this);
+                                   handleInterruptWrapper, this);
 
   initializeETH();
   initializeMAC();
   initializePHY();
 }
+
+void ENC28J60::enableRx() {
+  setETHRegBitField(ControlRegBank::BANK_0, ControlRegAddress::ECON1,
+                    ECON1_RXEN);
+  setETHRegBitField(ControlRegBank::BANK_0, ControlRegAddress::EIE,
+                    EIE_INTIE | EIE_PKTIE | EIE_RXERIE);
+  gpioInt_->enableExternalInterrupt(pinInt_);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Interrupt handlers...
+////////////////////////////////////////////////////////////////////////////////
+
+void ENC28J60::handleInterrupt() {
+  // We handle interrupt one at a time.
+  // Inspiration taken from the Linux kernel driver.
+  gpioInt_->disableExternalInterrupt(pinInt_);
+
+  fsm_.pushEvent(FSM::Event::INTERRUPT);
+}
+
+void ENC28J60::handleRxDMAEvent(DMA::StreamEvent event) {
+  switch (event.type) {
+  case DMA::StreamEventType::TRANSFER_COMPLETE:
+    fsm_.pushEvent(FSM::Event::RX_DMA_COMPLETE);
+    break;
+  }
+}
+
+void handleInterruptWrapper(void* context) {
+  static_cast<ENC28J60*>(context)->handleInterrupt();
+}
+
+void handleRxDMAEventWrapper(DMA::StreamEvent event, void* context) {
+  static_cast<ENC28J60*>(context)->handleRxDMAEvent(event);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// FSM helper functions
+////////////////////////////////////////////////////////////////////////////////
 
 bool ENC28J60::receivePacketHeader() {
   if (readETHReg(ControlRegBank::BANK_1, ControlRegAddress::EPKTCNT) == 0) {
@@ -275,7 +315,7 @@ bool ENC28J60::receivePacketHeader() {
       dmaStreamRx_, dmaChannelRx_, DMA::Direction::PERI_TO_MEM, transactionSize,
       DMA::FIFOThreshold::DIRECT, false, DMA::Priority::VERY_HIGH, &SPI2->DR,
       DMA::Size::BYTE, false, rxDst, DMA::Size::BYTE, rxDstInc,
-      enc28j60HandleRxDMAEventWrapper, this);
+      handleRxDMAEventWrapper, this);
 
   dmaTx_->enableStream(dmaStreamTx_);
   dmaRx_->enableStream(dmaStreamRx_);
@@ -356,6 +396,16 @@ void ENC28J60::fsmActionEnableInt() {
     // clang-format on
 };
 
+////////////////////////////////////////////////////////////////////////////////
+// API (except initialization)
+////////////////////////////////////////////////////////////////////////////////
+
 void ENC28J60::process() { fsm_.processOneEvent(); }
+
+bool ENC28J60::linkIsUp() {
+  return BIT_IS_SET(readPHYReg(PHYRegAddress::PHSTAT1), PHSTAT1_LLSTAT);
+}
+
+void ENC28J60::freeRxPacket(Packet* packet) { rxPacketBuffer_.free(packet); }
 
 }; // namespace enc28j60
