@@ -5,6 +5,15 @@
 
 namespace enc28j60 {
 
+const size_t PACKET_HEADER_SIZE = 6;
+const size_t PACKET_FRAME_SIZE = 1600;
+
+struct Packet {
+  uint16_t header[PACKET_HEADER_SIZE] = {0};
+  size_t frameLength = 0;
+  uint8_t frame[PACKET_FRAME_SIZE] = {0};
+};
+
 enum class Mode {
   FULL_DUPLEX,
 };
@@ -217,8 +226,10 @@ const uint16_t PHSTAT1_PHDPX = 0b0000100000000000;
 const uint16_t PHSTAT1_LLSTAT = 0b0000000000000100;
 const uint16_t PHSTAT1_JBSTAT = 0b0000000000000010;
 
-const size_t PACKET_HEADER_SIZE = 6;
-const size_t PACKET_FRAME_SIZE = 1600;
+const size_t RX_PACKET_BUFFER_SIZE = 8;
+
+const uint16_t CONFIG_ERXST = 0x0000;
+const uint16_t CONFIG_ERXND = 0x0FFF;
 
 #pragma GCC diagnostic pop
 

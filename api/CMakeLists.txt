@@ -12,6 +12,7 @@ add_library(STM32F446Lib STATIC
     src/stm32f446/SPI.cpp
     src/enc28j60/ENC28J60.cpp
     src/enc28j60/Core.cpp
+    src/enc28j60/Receiver.cpp
     )
 
 target_include_directories(STM32F446Lib
