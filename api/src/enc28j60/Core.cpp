@@ -20,13 +20,10 @@ static uint8_t generateHeaderByte(Opcode opcode, ControlRegAddress addr) {
 }
 
 void Core::selectControlRegBank(ControlRegBank bank) {
-  // TODO: Fix me!
-  static auto currentBank = ControlRegBank::BANK_0;
-
-  if ((currentBank == bank) || (bank == ControlRegBank::BANK_DONT_CARE)) {
+  if ((currentBank_ == bank) || (bank == ControlRegBank::BANK_DONT_CARE)) {
     return;
   } else {
-    currentBank = bank;
+    currentBank_ = bank;
   }
 
   uint16_t data[] = {

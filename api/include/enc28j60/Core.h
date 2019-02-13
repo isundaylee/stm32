@@ -19,6 +19,8 @@ private:
   GPIO* gpioInt_;
   int pinInt_;
 
+  ControlRegBank currentBank_ = ControlRegBank::BANK_DONT_CARE;
+
   void selectControlRegBank(ControlRegBank bank);
 
 public:
