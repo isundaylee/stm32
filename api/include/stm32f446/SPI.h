@@ -54,6 +54,8 @@ public:
 
   bool transmit(uint16_t const* data, size_t len);
   bool transact(uint16_t* data, size_t len);
+
+  SPI_TypeDef* getRaw() { return spi_; }
 };
 
 extern SPI SPI_1;

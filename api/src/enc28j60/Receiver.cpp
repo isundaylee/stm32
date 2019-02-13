@@ -74,12 +74,13 @@ bool Receiver::receivePacketHeader() {
       parent_.dmaTx_.stream, parent_.dmaTx_.channel,
       DMA::Direction::MEM_TO_PERI, transactionSize, DMA::FIFOThreshold::DIRECT,
       false, DMA::Priority::VERY_HIGH, rxDst, DMA::Size::BYTE, rxDstInc,
-      &SPI2->DR, DMA::Size::BYTE, false, nullptr, nullptr);
+      &parent_.spi_->getRaw()->DR, DMA::Size::BYTE, false, nullptr, nullptr);
   parent_.dmaRx_.dma->configureStream(
       parent_.dmaRx_.stream, parent_.dmaRx_.channel,
       DMA::Direction::PERI_TO_MEM, transactionSize, DMA::FIFOThreshold::DIRECT,
-      false, DMA::Priority::VERY_HIGH, &SPI2->DR, DMA::Size::BYTE, false, rxDst,
-      DMA::Size::BYTE, rxDstInc, handleRxDMAEventWrapper, this);
+      false, DMA::Priority::VERY_HIGH, &parent_.spi_->getRaw()->DR,
+      DMA::Size::BYTE, false, rxDst, DMA::Size::BYTE, rxDstInc,
+      handleRxDMAEventWrapper, this);
 
   parent_.dmaTx_.dma->enableStream(parent_.dmaTx_.stream);
   parent_.dmaRx_.dma->enableStream(parent_.dmaRx_.stream);
@@ -93,8 +94,8 @@ bool Receiver::receivePacketHeader() {
 
 void Receiver::fsmActionRxCleanup() {
   parent_.core_.readBufferMemoryEnd();
-  SPI_2.disableRxDMA();
-  SPI_2.disableTxDMA();
+  parent_.spi_->disableRxDMA();
+  parent_.spi_->disableTxDMA();
 
   uint16_t* packetHeader =
       (!!currentRxPacket_ ? currentRxPacket_->header : devNullHeader_);

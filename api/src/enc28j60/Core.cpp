@@ -131,15 +131,15 @@ void Core::readBufferMemoryStart() {
   uint16_t header[] = {generateHeaderByte(
       Opcode::READ_BUFFER_MEMORY, ControlRegAddress::READ_BUFFER_MEMORY)};
 
-  GPIO_B.clear(12);
-  SPI_2.transact(header, sizeof(header) / sizeof(header[0]));
+  pinCS_.gpio->clear(pinCS_.pin);
+  spi_->transact(header, sizeof(header) / sizeof(header[0]));
 }
 
-void Core::readBufferMemoryEnd() { GPIO_B.set(12); }
+void Core::readBufferMemoryEnd() { pinCS_.gpio->set(pinCS_.pin); }
 
 void Core::readBufferMemory(uint16_t* data, size_t len) {
   readBufferMemoryStart();
-  SPI_2.transact(data, len);
+  spi_->transact(data, len);
   readBufferMemoryEnd();
 }
 
