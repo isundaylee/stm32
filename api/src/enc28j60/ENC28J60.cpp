@@ -78,19 +78,15 @@ void ENC28J60::initializePHY() {
   core_.writePHYReg(PHYRegAddress::PHCON1, PHCON1_PDPXMD);
 }
 
-void ENC28J60::enable(SPI* spi, GPIO::Pin pinCS, GPIO::Pin pinInt, DMA* dmaTx,
-                      int dmaStreamTx, int dmaChannelTx, DMA* dmaRx,
-                      int dmaStreamRx, int dmaChannelRx, Mode mode,
+void ENC28J60::enable(SPI* spi, GPIO::Pin pinCS, GPIO::Pin pinInt,
+                      DMA::Channel dmaTx, DMA::Channel dmaRx, Mode mode,
                       EventHandler eventHandler, void* eventHandlerContext) {
   spi_ = spi;
   pinCS_ = pinCS;
   pinInt_ = pinInt;
   dmaTx_ = dmaTx;
-  dmaStreamTx_ = dmaStreamTx;
-  dmaChannelTx_ = dmaChannelTx;
   dmaRx_ = dmaRx;
-  dmaStreamRx_ = dmaStreamRx;
-  dmaChannelRx_ = dmaChannelRx;
+
   mode_ = mode;
   eventHandler_ = eventHandler;
   eventHandlerContext_ = eventHandlerContext;
@@ -180,26 +176,26 @@ bool ENC28J60::receivePacketHeader() {
   core_.readBufferMemoryStart();
   spi_->enableTxDMA();
   spi_->enableRxDMA();
-  dmaTx_->enable();
-  dmaRx_->enable();
+  dmaTx_.dma->enable();
+  dmaRx_.dma->enable();
 
   uint8_t* rxDst =
       (!!currentRxPacket_ ? currentRxPacket_->frame : &devNullFrame_);
   bool rxDstInc = (!!currentRxPacket_ ? true : false);
 
-  dmaTx_->configureStream(
-      dmaStreamTx_, dmaChannelTx_, DMA::Direction::MEM_TO_PERI, transactionSize,
-      DMA::FIFOThreshold::DIRECT, false, DMA::Priority::VERY_HIGH, rxDst,
-      DMA::Size::BYTE, rxDstInc, &SPI2->DR, DMA::Size::BYTE, false, nullptr,
-      nullptr);
-  dmaRx_->configureStream(
-      dmaStreamRx_, dmaChannelRx_, DMA::Direction::PERI_TO_MEM, transactionSize,
-      DMA::FIFOThreshold::DIRECT, false, DMA::Priority::VERY_HIGH, &SPI2->DR,
-      DMA::Size::BYTE, false, rxDst, DMA::Size::BYTE, rxDstInc,
-      handleRxDMAEventWrapper, this);
+  dmaTx_.dma->configureStream(
+      dmaTx_.stream, dmaTx_.channel, DMA::Direction::MEM_TO_PERI,
+      transactionSize, DMA::FIFOThreshold::DIRECT, false,
+      DMA::Priority::VERY_HIGH, rxDst, DMA::Size::BYTE, rxDstInc, &SPI2->DR,
+      DMA::Size::BYTE, false, nullptr, nullptr);
+  dmaRx_.dma->configureStream(
+      dmaRx_.stream, dmaRx_.channel, DMA::Direction::PERI_TO_MEM,
+      transactionSize, DMA::FIFOThreshold::DIRECT, false,
+      DMA::Priority::VERY_HIGH, &SPI2->DR, DMA::Size::BYTE, false, rxDst,
+      DMA::Size::BYTE, rxDstInc, handleRxDMAEventWrapper, this);
 
-  dmaTx_->enableStream(dmaStreamTx_);
-  dmaRx_->enableStream(dmaStreamRx_);
+  dmaTx_.dma->enableStream(dmaTx_.stream);
+  dmaRx_.dma->enableStream(dmaRx_.stream);
 
   return true;
 }

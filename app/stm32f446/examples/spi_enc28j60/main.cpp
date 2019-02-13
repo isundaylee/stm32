@@ -75,9 +75,9 @@ void handleEthernetEvent(enc28j60::Event event, void*) {
 void handleTimerInterrupt() { events.push(Event::TIMER_INTERRUPT); }
 
 static void initializeEthernet() {
-  eth.enable(&SPI_2, GPIO::Pin{&GPIO_B, 12}, GPIO::Pin{&GPIO_C, 9}, &DMA_1, 4,
-             0, &DMA_1, 3, 0, enc28j60::Mode::FULL_DUPLEX, handleEthernetEvent,
-             nullptr);
+  eth.enable(&SPI_2, GPIO::Pin{&GPIO_B, 12}, GPIO::Pin{&GPIO_C, 9},
+             DMA::Channel{&DMA_1, 4, 0}, DMA::Channel{&DMA_1, 3, 0},
+             enc28j60::Mode::FULL_DUPLEX, handleEthernetEvent, nullptr);
 
   USART_1.write("Waiting for link");
   while (!eth.linkIsUp()) {

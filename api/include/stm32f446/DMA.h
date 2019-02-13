@@ -69,6 +69,12 @@ public:
     FULL = 0b11,
   };
 
+  struct Channel {
+    DMA* dma;
+    int stream;
+    uint32_t channel;
+  };
+
   DMA(DMA_TypeDef* dma) : dma_(dma) {}
 
   void enable();

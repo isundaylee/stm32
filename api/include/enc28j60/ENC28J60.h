@@ -51,14 +51,8 @@ private:
   SPI* spi_;
   GPIO::Pin pinCS_;
   GPIO::Pin pinInt_;
-
-  DMA* dmaTx_;
-  int dmaStreamTx_;
-  int dmaChannelTx_;
-
-  DMA* dmaRx_;
-  int dmaStreamRx_;
-  int dmaChannelRx_;
+  DMA::Channel dmaTx_;
+  DMA::Channel dmaRx_;
 
   // Configuration
   Mode mode_;
@@ -123,9 +117,8 @@ public:
   // High-level interface
   ENC28J60() : core_{}, fsm_(FSM::State::IDLE, *this, fsmTransitions_) {}
 
-  void enable(SPI* spi, GPIO::Pin pinCS, GPIO::Pin pinInt, DMA* dmaTx,
-              int dmaStreamTx, int dmaChannelTx, DMA* dmaRx, int dmaStreamRx,
-              int dmaChannelRx, Mode mode, EventHandler eventHandler,
+  void enable(SPI* spi, GPIO::Pin pinCS, GPIO::Pin pinInt, DMA::Channel dmaTx,
+              DMA::Channel dmaRx, Mode mode, EventHandler eventHandler,
               void* eventHandlerContext);
   void enableRx();
 
