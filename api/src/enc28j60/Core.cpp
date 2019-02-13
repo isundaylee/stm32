@@ -2,12 +2,9 @@
 
 namespace enc28j60 {
 
-void Core::enable(SPI* spi, GPIO* gpioCS, int pinCS, GPIO* gpioInt,
-                  int pinInt) {
+void Core::enable(SPI* spi, GPIO::Pin pinCS, GPIO::Pin pinInt) {
   spi_ = spi;
-  gpioCS_ = gpioCS;
   pinCS_ = pinCS;
-  gpioInt_ = gpioInt;
   pinInt_ = pinInt;
 }
 
@@ -30,16 +27,16 @@ void Core::selectControlRegBank(ControlRegBank bank) {
       generateHeaderByte(Opcode::BIT_FIELD_CLEAR, ControlRegAddress::ECON1),
       0b00000011};
 
-  gpioCS_->clear(pinCS_);
+  pinCS_.gpio->clear(pinCS_.pin);
   spi_->transact(data, sizeof(data) / sizeof(data[0]));
-  gpioCS_->set(pinCS_);
+  pinCS_.gpio->set(pinCS_.pin);
 
   data[0] = generateHeaderByte(Opcode::BIT_FIELD_SET, ControlRegAddress::ECON1);
   data[1] = static_cast<uint8_t>(bank);
 
-  gpioCS_->clear(pinCS_);
+  pinCS_.gpio->clear(pinCS_.pin);
   spi_->transact(data, sizeof(data) / sizeof(data[0]));
-  gpioCS_->set(pinCS_);
+  pinCS_.gpio->set(pinCS_.pin);
 }
 
 void Core::setETHRegBitField(ControlRegBank bank, ControlRegAddress addr,
@@ -48,9 +45,9 @@ void Core::setETHRegBitField(ControlRegBank bank, ControlRegAddress addr,
 
   uint16_t data[] = {generateHeaderByte(Opcode::BIT_FIELD_SET, addr), bits};
 
-  gpioCS_->clear(pinCS_);
+  pinCS_.gpio->clear(pinCS_.pin);
   spi_->transact(data, sizeof(data) / sizeof(data[0]));
-  gpioCS_->set(pinCS_);
+  pinCS_.gpio->set(pinCS_.pin);
 }
 
 void Core::clearETHRegBitField(ControlRegBank bank, ControlRegAddress addr,
@@ -59,9 +56,9 @@ void Core::clearETHRegBitField(ControlRegBank bank, ControlRegAddress addr,
 
   uint16_t data[] = {generateHeaderByte(Opcode::BIT_FIELD_CLEAR, addr), bits};
 
-  gpioCS_->clear(pinCS_);
+  pinCS_.gpio->clear(pinCS_.pin);
   spi_->transact(data, sizeof(data) / sizeof(data[0]));
-  gpioCS_->set(pinCS_);
+  pinCS_.gpio->set(pinCS_.pin);
 }
 
 uint8_t Core::readETHReg(ControlRegBank bank, ControlRegAddress addr) {
@@ -70,9 +67,9 @@ uint8_t Core::readETHReg(ControlRegBank bank, ControlRegAddress addr) {
   uint16_t data[] = {generateHeaderByte(Opcode::READ_CONTROL_REGISTER, addr),
                      0x00};
 
-  gpioCS_->clear(pinCS_);
+  pinCS_.gpio->clear(pinCS_.pin);
   spi_->transact(data, sizeof(data) / sizeof(data[0]));
-  gpioCS_->set(pinCS_);
+  pinCS_.gpio->set(pinCS_.pin);
 
   return static_cast<uint8_t>(data[1]);
 }
@@ -84,9 +81,9 @@ uint8_t Core::writeControlReg(ControlRegBank bank, ControlRegAddress addr,
   uint16_t data[] = {generateHeaderByte(Opcode::WRITE_CONTROL_REGISTER, addr),
                      value};
 
-  gpioCS_->clear(pinCS_);
+  pinCS_.gpio->clear(pinCS_.pin);
   spi_->transact(data, sizeof(data) / sizeof(data[0]));
-  gpioCS_->set(pinCS_);
+  pinCS_.gpio->set(pinCS_.pin);
 
   return static_cast<uint8_t>(data[1]);
 }
@@ -97,9 +94,9 @@ uint8_t Core::readMACMIIReg(ControlRegBank bank, ControlRegAddress addr) {
   uint16_t data[] = {generateHeaderByte(Opcode::READ_CONTROL_REGISTER, addr),
                      0x00, 0x00};
 
-  gpioCS_->clear(pinCS_);
+  pinCS_.gpio->clear(pinCS_.pin);
   spi_->transact(data, sizeof(data) / sizeof(data[0]));
-  gpioCS_->set(pinCS_);
+  pinCS_.gpio->set(pinCS_.pin);
 
   return static_cast<uint8_t>(data[2]);
 }

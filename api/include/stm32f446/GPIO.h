@@ -36,6 +36,11 @@ public:
     BOTH,
   };
 
+  struct Pin {
+    GPIO* gpio;
+    int pin;
+  };
+
   GPIO(GPIO_TypeDef* gpio) { gpio_ = gpio; }
 
   GPIO(GPIO&& move) = delete;
@@ -47,7 +52,7 @@ public:
 
   void setMode(int pin, PinMode mode, uint32_t alternate = 0);
   void setupExternalInterrupt(int pin, TriggerDirection direction,
-                               InterruptHandler handler, void* handlerContext);
+                              InterruptHandler handler, void* handlerContext);
   void enableExternalInterrupt(int pin);
   void disableExternalInterrupt(int pin);
 

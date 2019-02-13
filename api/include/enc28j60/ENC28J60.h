@@ -49,12 +49,8 @@ class ENC28J60 {
 private:
   // Peripheral dependencies
   SPI* spi_;
-
-  GPIO* gpioCS_;
-  int pinCS_;
-
-  GPIO* gpioInt_;
-  int pinInt_;
+  GPIO::Pin pinCS_;
+  GPIO::Pin pinInt_;
 
   DMA* dmaTx_;
   int dmaStreamTx_;
@@ -127,10 +123,10 @@ public:
   // High-level interface
   ENC28J60() : core_{}, fsm_(FSM::State::IDLE, *this, fsmTransitions_) {}
 
-  void enable(SPI* spi, GPIO* gpioCS, int pinCS, GPIO* gpioInt, int pinInt,
-              DMA* dmaTx, int dmaStreamTx, int dmaChannelTx, DMA* dmaRx,
-              int dmaStreamRx, int dmaChannelRx, Mode mode,
-              EventHandler eventHandler, void* eventHandlerContext);
+  void enable(SPI* spi, GPIO::Pin pinCS, GPIO::Pin pinInt, DMA* dmaTx,
+              int dmaStreamTx, int dmaChannelTx, DMA* dmaRx, int dmaStreamRx,
+              int dmaChannelRx, Mode mode, EventHandler eventHandler,
+              void* eventHandlerContext);
   void enableRx();
 
   void process();

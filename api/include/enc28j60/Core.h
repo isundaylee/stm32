@@ -12,12 +12,8 @@ class Core {
 private:
   // Peripheral dependencies
   SPI* spi_;
-
-  GPIO* gpioCS_;
-  int pinCS_;
-
-  GPIO* gpioInt_;
-  int pinInt_;
+  GPIO::Pin pinCS_;
+  GPIO::Pin pinInt_;
 
   ControlRegBank currentBank_ = ControlRegBank::BANK_DONT_CARE;
 
@@ -26,7 +22,7 @@ private:
 public:
   Core() {}
 
-  void enable(SPI* spi, GPIO* gpioCS, int pinCS, GPIO* gpioInt, int pinInt);
+  void enable(SPI* spi, GPIO::Pin pinCS, GPIO::Pin pinInt);
 
   void setETHRegBitField(ControlRegBank bank, ControlRegAddress addr,
                          uint8_t bits);

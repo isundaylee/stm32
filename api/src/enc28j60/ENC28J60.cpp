@@ -78,14 +78,12 @@ void ENC28J60::initializePHY() {
   core_.writePHYReg(PHYRegAddress::PHCON1, PHCON1_PDPXMD);
 }
 
-void ENC28J60::enable(SPI* spi, GPIO* gpioCS, int pinCS, GPIO* gpioInt,
-                      int pinInt, DMA* dmaTx, int dmaStreamTx, int dmaChannelTx,
-                      DMA* dmaRx, int dmaStreamRx, int dmaChannelRx, Mode mode,
+void ENC28J60::enable(SPI* spi, GPIO::Pin pinCS, GPIO::Pin pinInt, DMA* dmaTx,
+                      int dmaStreamTx, int dmaChannelTx, DMA* dmaRx,
+                      int dmaStreamRx, int dmaChannelRx, Mode mode,
                       EventHandler eventHandler, void* eventHandlerContext) {
   spi_ = spi;
-  gpioCS_ = gpioCS;
   pinCS_ = pinCS;
-  gpioInt_ = gpioInt;
   pinInt_ = pinInt;
   dmaTx_ = dmaTx;
   dmaStreamTx_ = dmaStreamTx;
@@ -97,11 +95,11 @@ void ENC28J60::enable(SPI* spi, GPIO* gpioCS, int pinCS, GPIO* gpioInt,
   eventHandler_ = eventHandler;
   eventHandlerContext_ = eventHandlerContext;
 
-  core_.enable(spi, gpioCS, pinCS, gpioInt, pinInt);
+  core_.enable(spi, pinCS, pinInt);
 
-  gpioInt_->setupExternalInterrupt(pinInt_,
-                                   GPIO::TriggerDirection::FALLING_EDGE,
-                                   handleInterruptWrapper, this);
+  pinInt_.gpio->setupExternalInterrupt(pinInt_.pin,
+                                       GPIO::TriggerDirection::FALLING_EDGE,
+                                       handleInterruptWrapper, this);
 
   initializeETH();
   initializeMAC();
@@ -113,7 +111,7 @@ void ENC28J60::enableRx() {
                           ECON1_RXEN);
   core_.setETHRegBitField(ControlRegBank::BANK_0, ControlRegAddress::EIE,
                           EIE_INTIE | EIE_PKTIE | EIE_RXERIE);
-  gpioInt_->enableExternalInterrupt(pinInt_);
+  pinInt_.gpio->enableExternalInterrupt(pinInt_.pin);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -123,7 +121,7 @@ void ENC28J60::enableRx() {
 void ENC28J60::handleInterrupt() {
   // We handle interrupt one at a time.
   // Inspiration taken from the Linux kernel driver.
-  gpioInt_->disableExternalInterrupt(pinInt_);
+  pinInt_.gpio->disableExternalInterrupt(pinInt_.pin);
 
   fsm_.pushEvent(FSM::Event::INTERRUPT);
 }
@@ -271,7 +269,7 @@ void ENC28J60::fsmActionCheckEIR() {
 }
 
 void ENC28J60::fsmActionEnableInt() {
-  gpioInt_->enableExternalInterrupt(pinInt_);
+  pinInt_.gpio->enableExternalInterrupt(pinInt_.pin);
 }
 
 /* static */ ENC28J60::FSM::Transition ENC28J60::fsmTransitions_[] = {
