@@ -1,6 +1,7 @@
 #pragma once
 
 #include "enc28j60/Consts.h"
+#include "enc28j60/Core.h"
 
 #include <DMA.h>
 #include <GPIO.h>
@@ -69,6 +70,8 @@ private:
   EventHandler eventHandler_;
   void* eventHandlerContext_;
 
+  Core core_;
+
   // Rx packet buffer
   static const size_t RX_PACKET_BUFFER_SIZE = 8;
 
@@ -76,8 +79,6 @@ private:
   Packet* currentRxPacket_ = nullptr;
   uint8_t devNullFrame_;
   uint16_t devNullHeader_[PACKET_HEADER_SIZE];
-
-  void selectControlRegBank(ControlRegBank bank);
 
   // Initialization routines
   void initializeETH();
@@ -124,7 +125,7 @@ public:
   Stats stats;
 
   // High-level interface
-  ENC28J60() : fsm_(FSM::State::IDLE, *this, fsmTransitions_) {}
+  ENC28J60() : core_{}, fsm_(FSM::State::IDLE, *this, fsmTransitions_) {}
 
   void enable(SPI* spi, GPIO* gpioCS, int pinCS, GPIO* gpioInt, int pinInt,
               DMA* dmaTx, int dmaStreamTx, int dmaChannelTx, DMA* dmaRx,
@@ -137,24 +138,6 @@ public:
   bool linkIsUp();
 
   void freeRxPacket(Packet* packet);
-
-  // Low-level interface
-  void setETHRegBitField(ControlRegBank bank, ControlRegAddress addr,
-                         uint8_t bits);
-  void clearETHRegBitField(ControlRegBank bank, ControlRegAddress addr,
-                           uint8_t bits);
-
-  uint8_t readETHReg(ControlRegBank bank, ControlRegAddress addr);
-  uint8_t readMACMIIReg(ControlRegBank bank, ControlRegAddress addr);
-  uint8_t writeControlReg(ControlRegBank bank, ControlRegAddress addr,
-                          uint8_t value);
-
-  uint16_t readPHYReg(PHYRegAddress addr);
-  void writePHYReg(PHYRegAddress addr, uint16_t value);
-
-  void readBufferMemory(uint16_t* data, size_t len);
-  void readBufferMemoryStart();
-  void readBufferMemoryEnd();
 };
 
 } // namespace enc28j60

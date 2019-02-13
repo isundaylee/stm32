@@ -5,7 +5,7 @@
 namespace enc28j60 {
 
 ////////////////////////////////////////////////////////////////////////////////
-// Low-level interface
+// Initialization routines
 ////////////////////////////////////////////////////////////////////////////////
 
 static const uint16_t CONFIG_ERXST = 0x0000;
@@ -17,191 +17,65 @@ static uint16_t mergeBytes(uint8_t low, uint8_t high) {
   return ((static_cast<uint16_t>(high) << 8) + low);
 }
 
-static uint8_t generateHeaderByte(Opcode opcode, ControlRegAddress addr) {
-  return (static_cast<uint8_t>(opcode) << 5) + static_cast<uint8_t>(addr);
-}
-
-void ENC28J60::selectControlRegBank(ControlRegBank bank) {
-  static auto currentBank = ControlRegBank::BANK_0;
-
-  if ((currentBank == bank) || (bank == ControlRegBank::BANK_DONT_CARE)) {
-    return;
-  } else {
-    currentBank = bank;
-  }
-
-  uint16_t data[] = {
-      generateHeaderByte(Opcode::BIT_FIELD_CLEAR, ControlRegAddress::ECON1),
-      0b00000011};
-
-  gpioCS_->clear(pinCS_);
-  spi_->transact(data, sizeof(data) / sizeof(data[0]));
-  gpioCS_->set(pinCS_);
-
-  data[0] = generateHeaderByte(Opcode::BIT_FIELD_SET, ControlRegAddress::ECON1);
-  data[1] = static_cast<uint8_t>(bank);
-
-  gpioCS_->clear(pinCS_);
-  spi_->transact(data, sizeof(data) / sizeof(data[0]));
-  gpioCS_->set(pinCS_);
-}
-
-void ENC28J60::setETHRegBitField(ControlRegBank bank, ControlRegAddress addr,
-                                 uint8_t bits) {
-  selectControlRegBank(bank);
-
-  uint16_t data[] = {generateHeaderByte(Opcode::BIT_FIELD_SET, addr), bits};
-
-  gpioCS_->clear(pinCS_);
-  spi_->transact(data, sizeof(data) / sizeof(data[0]));
-  gpioCS_->set(pinCS_);
-}
-
-void ENC28J60::clearETHRegBitField(ControlRegBank bank, ControlRegAddress addr,
-                                   uint8_t bits) {
-  selectControlRegBank(bank);
-
-  uint16_t data[] = {generateHeaderByte(Opcode::BIT_FIELD_CLEAR, addr), bits};
-
-  gpioCS_->clear(pinCS_);
-  spi_->transact(data, sizeof(data) / sizeof(data[0]));
-  gpioCS_->set(pinCS_);
-}
-
-uint8_t ENC28J60::readETHReg(ControlRegBank bank, ControlRegAddress addr) {
-  selectControlRegBank(bank);
-
-  uint16_t data[] = {generateHeaderByte(Opcode::READ_CONTROL_REGISTER, addr),
-                     0x00};
-
-  gpioCS_->clear(pinCS_);
-  spi_->transact(data, sizeof(data) / sizeof(data[0]));
-  gpioCS_->set(pinCS_);
-
-  return static_cast<uint8_t>(data[1]);
-}
-
-uint8_t ENC28J60::writeControlReg(ControlRegBank bank, ControlRegAddress addr,
-                                  uint8_t value) {
-  selectControlRegBank(bank);
-
-  uint16_t data[] = {generateHeaderByte(Opcode::WRITE_CONTROL_REGISTER, addr),
-                     value};
-
-  gpioCS_->clear(pinCS_);
-  spi_->transact(data, sizeof(data) / sizeof(data[0]));
-  gpioCS_->set(pinCS_);
-
-  return static_cast<uint8_t>(data[1]);
-}
-
-uint8_t ENC28J60::readMACMIIReg(ControlRegBank bank, ControlRegAddress addr) {
-  selectControlRegBank(bank);
-
-  uint16_t data[] = {generateHeaderByte(Opcode::READ_CONTROL_REGISTER, addr),
-                     0x00, 0x00};
-
-  gpioCS_->clear(pinCS_);
-  spi_->transact(data, sizeof(data) / sizeof(data[0]));
-  gpioCS_->set(pinCS_);
-
-  return static_cast<uint8_t>(data[2]);
-}
-
-uint16_t ENC28J60::readPHYReg(PHYRegAddress addr) {
-  writeControlReg(ControlRegBank::BANK_2, ControlRegAddress::MIREGADR,
-                  static_cast<uint8_t>(addr));
-  writeControlReg(ControlRegBank::BANK_2, ControlRegAddress::MICMD, 0x01);
-  WAIT_UNTIL(BIT_IS_CLEAR(
-      readMACMIIReg(ControlRegBank::BANK_3, ControlRegAddress::MISTAT), 0x01));
-  writeControlReg(ControlRegBank::BANK_2, ControlRegAddress::MICMD, 0x00);
-
-  uint8_t low = readMACMIIReg(ControlRegBank::BANK_2, ControlRegAddress::MIRDL);
-  uint8_t high =
-      readMACMIIReg(ControlRegBank::BANK_2, ControlRegAddress::MIRDH);
-
-  return static_cast<uint16_t>(low) + (static_cast<uint16_t>(high) << 8);
-}
-
-void ENC28J60::writePHYReg(PHYRegAddress addr, uint16_t value) {
-  writeControlReg(ControlRegBank::BANK_2, ControlRegAddress::MIREGADR,
-                  static_cast<uint8_t>(addr));
-  writeControlReg(ControlRegBank::BANK_2, ControlRegAddress::MIWRL,
-                  static_cast<uint8_t>(value & 0x00FF));
-  writeControlReg(ControlRegBank::BANK_2, ControlRegAddress::MIWRH,
-                  static_cast<uint8_t>(value >> 8));
-  WAIT_UNTIL(BIT_IS_CLEAR(
-      readMACMIIReg(ControlRegBank::BANK_3, ControlRegAddress::MISTAT), 0x01));
-}
-
-void ENC28J60::readBufferMemoryStart() {
-  uint16_t header[] = {generateHeaderByte(
-      Opcode::READ_BUFFER_MEMORY, ControlRegAddress::READ_BUFFER_MEMORY)};
-
-  GPIO_B.clear(12);
-  SPI_2.transact(header, sizeof(header) / sizeof(header[0]));
-}
-
-void ENC28J60::readBufferMemoryEnd() { GPIO_B.set(12); }
-
-void ENC28J60::readBufferMemory(uint16_t* data, size_t len) {
-  readBufferMemoryStart();
-  SPI_2.transact(data, len);
-  readBufferMemoryEnd();
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// Initialization routines
-////////////////////////////////////////////////////////////////////////////////
-
 void ENC28J60::initializeMAC() {
-  writeControlReg(ControlRegBank::BANK_2, ControlRegAddress::MACON1,
-                  MACON1_MARXEN | MACON1_TXPAUS | MACON1_RXPAUS);
-  writeControlReg(ControlRegBank::BANK_2, ControlRegAddress::MACON3,
-                  MACON3_PADCFG0 | MACON3_FRMLNEN | MACON3_FULDPX);
-  writeControlReg(ControlRegBank::BANK_2, ControlRegAddress::MACON4,
-                  MACON4_DEFER);
+  core_.writeControlReg(ControlRegBank::BANK_2, ControlRegAddress::MACON1,
+                        MACON1_MARXEN | MACON1_TXPAUS | MACON1_RXPAUS);
+  core_.writeControlReg(ControlRegBank::BANK_2, ControlRegAddress::MACON3,
+                        MACON3_PADCFG0 | MACON3_FRMLNEN | MACON3_FULDPX);
+  core_.writeControlReg(ControlRegBank::BANK_2, ControlRegAddress::MACON4,
+                        MACON4_DEFER);
 
-  writeControlReg(ControlRegBank::BANK_2, ControlRegAddress::MAMXFLL, 0x00);
-  writeControlReg(ControlRegBank::BANK_2, ControlRegAddress::MAMXFLH, 0x06);
+  core_.writeControlReg(ControlRegBank::BANK_2, ControlRegAddress::MAMXFLL,
+                        0x00);
+  core_.writeControlReg(ControlRegBank::BANK_2, ControlRegAddress::MAMXFLH,
+                        0x06);
 
-  writeControlReg(ControlRegBank::BANK_2, ControlRegAddress::MABBIPG, 0x15);
-  writeControlReg(ControlRegBank::BANK_2, ControlRegAddress::MAIPGL, 0x12);
+  core_.writeControlReg(ControlRegBank::BANK_2, ControlRegAddress::MABBIPG,
+                        0x15);
+  core_.writeControlReg(ControlRegBank::BANK_2, ControlRegAddress::MAIPGL,
+                        0x12);
 
-  writeControlReg(ControlRegBank::BANK_3, ControlRegAddress::MAADR1, 0x11);
-  writeControlReg(ControlRegBank::BANK_3, ControlRegAddress::MAADR2, 0x22);
-  writeControlReg(ControlRegBank::BANK_3, ControlRegAddress::MAADR3, 0x33);
-  writeControlReg(ControlRegBank::BANK_3, ControlRegAddress::MAADR4, 0x44);
-  writeControlReg(ControlRegBank::BANK_3, ControlRegAddress::MAADR5, 0x55);
-  writeControlReg(ControlRegBank::BANK_3, ControlRegAddress::MAADR6, 0x66);
+  core_.writeControlReg(ControlRegBank::BANK_3, ControlRegAddress::MAADR1,
+                        0x11);
+  core_.writeControlReg(ControlRegBank::BANK_3, ControlRegAddress::MAADR2,
+                        0x22);
+  core_.writeControlReg(ControlRegBank::BANK_3, ControlRegAddress::MAADR3,
+                        0x33);
+  core_.writeControlReg(ControlRegBank::BANK_3, ControlRegAddress::MAADR4,
+                        0x44);
+  core_.writeControlReg(ControlRegBank::BANK_3, ControlRegAddress::MAADR5,
+                        0x55);
+  core_.writeControlReg(ControlRegBank::BANK_3, ControlRegAddress::MAADR6,
+                        0x66);
 }
 
 void ENC28J60::initializeETH() {
-  writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXSTL,
-                  lowByte(CONFIG_ERXST));
-  writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXSTH,
-                  highByte(CONFIG_ERXST));
-  writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXNDL,
-                  lowByte(CONFIG_ERXND));
-  writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXNDH,
-                  highByte(CONFIG_ERXND));
-  writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERDPTL,
-                  lowByte(CONFIG_ERXST));
-  writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERDPTH,
-                  highByte(CONFIG_ERXST));
-  writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXRDPTL,
-                  lowByte(CONFIG_ERXND));
-  writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXRDPTH,
-                  highByte(CONFIG_ERXND));
+  core_.writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXSTL,
+                        lowByte(CONFIG_ERXST));
+  core_.writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXSTH,
+                        highByte(CONFIG_ERXST));
+  core_.writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXNDL,
+                        lowByte(CONFIG_ERXND));
+  core_.writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXNDH,
+                        highByte(CONFIG_ERXND));
+  core_.writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERDPTL,
+                        lowByte(CONFIG_ERXST));
+  core_.writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERDPTH,
+                        highByte(CONFIG_ERXST));
+  core_.writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXRDPTL,
+                        lowByte(CONFIG_ERXND));
+  core_.writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXRDPTH,
+                        highByte(CONFIG_ERXND));
 
-  writeControlReg(ControlRegBank::BANK_1, ControlRegAddress::ERXFCON, 0x00);
-  WAIT_UNTIL(
-      BIT_IS_SET(readETHReg(ControlRegBank::BANK_0, ControlRegAddress::ESTAT),
-                 0b00000001));
+  core_.writeControlReg(ControlRegBank::BANK_1, ControlRegAddress::ERXFCON,
+                        0x00);
+  WAIT_UNTIL(BIT_IS_SET(
+      core_.readETHReg(ControlRegBank::BANK_0, ControlRegAddress::ESTAT),
+      0b00000001));
 }
 
 void ENC28J60::initializePHY() {
-  writePHYReg(PHYRegAddress::PHCON1, PHCON1_PDPXMD);
+  core_.writePHYReg(PHYRegAddress::PHCON1, PHCON1_PDPXMD);
 }
 
 void ENC28J60::enable(SPI* spi, GPIO* gpioCS, int pinCS, GPIO* gpioInt,
@@ -223,6 +97,8 @@ void ENC28J60::enable(SPI* spi, GPIO* gpioCS, int pinCS, GPIO* gpioInt,
   eventHandler_ = eventHandler;
   eventHandlerContext_ = eventHandlerContext;
 
+  core_.enable(spi, gpioCS, pinCS, gpioInt, pinInt);
+
   gpioInt_->setupExternalInterrupt(pinInt_,
                                    GPIO::TriggerDirection::FALLING_EDGE,
                                    handleInterruptWrapper, this);
@@ -233,10 +109,10 @@ void ENC28J60::enable(SPI* spi, GPIO* gpioCS, int pinCS, GPIO* gpioInt,
 }
 
 void ENC28J60::enableRx() {
-  setETHRegBitField(ControlRegBank::BANK_0, ControlRegAddress::ECON1,
-                    ECON1_RXEN);
-  setETHRegBitField(ControlRegBank::BANK_0, ControlRegAddress::EIE,
-                    EIE_INTIE | EIE_PKTIE | EIE_RXERIE);
+  core_.setETHRegBitField(ControlRegBank::BANK_0, ControlRegAddress::ECON1,
+                          ECON1_RXEN);
+  core_.setETHRegBitField(ControlRegBank::BANK_0, ControlRegAddress::EIE,
+                          EIE_INTIE | EIE_PKTIE | EIE_RXERIE);
   gpioInt_->enableExternalInterrupt(pinInt_);
 }
 
@@ -274,7 +150,7 @@ void handleRxDMAEventWrapper(DMA::StreamEvent event, void* context) {
 
 bool ENC28J60::receivePacketHeader() {
   uint8_t packetCount =
-      readETHReg(ControlRegBank::BANK_1, ControlRegAddress::EPKTCNT);
+      core_.readETHReg(ControlRegBank::BANK_1, ControlRegAddress::EPKTCNT);
 
   if (packetCount == 0) {
     return false;
@@ -292,7 +168,7 @@ bool ENC28J60::receivePacketHeader() {
       (!!currentRxPacket_ ? currentRxPacket_->header : devNullHeader_);
   size_t frameLen;
 
-  readBufferMemory(packetHeader, PACKET_HEADER_SIZE);
+  core_.readBufferMemory(packetHeader, PACKET_HEADER_SIZE);
   frameLen = static_cast<size_t>(packetHeader[2]) +
              (static_cast<size_t>(packetHeader[3]) << 8);
 
@@ -303,7 +179,7 @@ bool ENC28J60::receivePacketHeader() {
   // Starts DMA transactions to read packet frame
   size_t transactionSize = frameLen + (frameLen % 2);
 
-  readBufferMemoryStart();
+  core_.readBufferMemoryStart();
   spi_->enableTxDMA();
   spi_->enableRxDMA();
   dmaTx_->enable();
@@ -341,7 +217,7 @@ void ENC28J60::postEvent(Event event) {
 ////////////////////////////////////////////////////////////////////////////////
 
 void ENC28J60::fsmActionRxCleanup() {
-  readBufferMemoryEnd();
+  core_.readBufferMemoryEnd();
   SPI_2.disableRxDMA();
   SPI_2.disableTxDMA();
 
@@ -352,12 +228,12 @@ void ENC28J60::fsmActionRxCleanup() {
   // ENC28J60 errata issue 14
   newERXRDPT = (newERXRDPT == CONFIG_ERXST ? CONFIG_ERXND : newERXRDPT - 1);
 
-  writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXRDPTL,
-                  lowByte(newERXRDPT));
-  writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXRDPTH,
-                  highByte(newERXRDPT));
-  setETHRegBitField(ControlRegBank::BANK_0, ControlRegAddress::ECON2,
-                    ECON2_PKTDEC);
+  core_.writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXRDPTL,
+                        lowByte(newERXRDPT));
+  core_.writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXRDPTH,
+                        highByte(newERXRDPT));
+  core_.setETHRegBitField(ControlRegBank::BANK_0, ControlRegAddress::ECON2,
+                          ECON2_PKTDEC);
 
   if (!!currentRxPacket_) {
     rxBuffer.push(currentRxPacket_);
@@ -377,12 +253,12 @@ void ENC28J60::fsmActionRxCleanup() {
 
 void ENC28J60::fsmActionCheckEIR() {
   uint8_t eir =
-      readETHReg(ControlRegBank::BANK_DONT_CARE, ControlRegAddress::EIR);
+      core_.readETHReg(ControlRegBank::BANK_DONT_CARE, ControlRegAddress::EIR);
 
   if (BIT_IS_SET(eir, EIR_RXERIF)) {
     postEvent(Event::RX_CHIP_OVERFLOW);
-    clearETHRegBitField(ControlRegBank::BANK_DONT_CARE, ControlRegAddress::EIR,
-                        EIR_RXERIF);
+    core_.clearETHRegBitField(ControlRegBank::BANK_DONT_CARE,
+                              ControlRegAddress::EIR, EIR_RXERIF);
   }
 
   // We should always try to do an Rx even regardless of the value of
@@ -415,7 +291,7 @@ void ENC28J60::fsmActionEnableInt() {
 void ENC28J60::process() { fsm_.processOneEvent(); }
 
 bool ENC28J60::linkIsUp() {
-  return BIT_IS_SET(readPHYReg(PHYRegAddress::PHSTAT1), PHSTAT1_LLSTAT);
+  return BIT_IS_SET(core_.readPHYReg(PHYRegAddress::PHSTAT1), PHSTAT1_LLSTAT);
 }
 
 void ENC28J60::freeRxPacket(Packet* packet) { rxPacketBuffer_.free(packet); }
