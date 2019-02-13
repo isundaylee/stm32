@@ -1,7 +1,6 @@
 add_library(STM32F446Lib STATIC
     src/Startup.cpp
     src/Utils.cpp
-    src/ENC28J60.cpp
     src/stm32f446/ADC.cpp
     src/stm32f446/Clock.cpp
     src/stm32f446/DAC.cpp
@@ -11,6 +10,7 @@ add_library(STM32F446Lib STATIC
     src/stm32f446/Timer.cpp
     src/stm32f446/USART.cpp
     src/stm32f446/SPI.cpp
+    src/enc28j60/ENC28J60.cpp
     )
 
 target_include_directories(STM32F446Lib

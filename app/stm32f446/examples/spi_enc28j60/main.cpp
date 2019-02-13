@@ -10,7 +10,7 @@
 
 #include <RingBuffer.h>
 
-#include "ENC28J60.h"
+#include <enc28j60/ENC28J60.h>
 
 #define DUMP_PACKET_HEADERS 0
 #define DUMP_STATS 1

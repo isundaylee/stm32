@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ENC28J60Consts.h"
+#include "enc28j60/Consts.h"
 
 #include <DMA.h>
 #include <GPIO.h>
