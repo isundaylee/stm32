@@ -38,15 +38,42 @@ void handleRxDMAEventWrapper(DMA::StreamEvent event, void* context) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// FSM helper functions
+// FSM goes round and round...
 ////////////////////////////////////////////////////////////////////////////////
 
-bool Receiver::receivePacketHeader() {
+void Receiver::fsmActionActivate() {
+  // We handle interrupt one at a time.
+  // Inspiration taken from the Linux kernel driver.
+  parent_.pinInt_.gpio->disableExternalInterrupt(parent_.pinInt_.pin);
+
+  fsm_.pushEvent(FSMEvent::NOW_ACTIVE);
+}
+
+void Receiver::fsmActionCheckEIR() {
+  uint8_t eir = parent_.core_.readETHReg(ControlRegBank::BANK_DONT_CARE,
+                                         ControlRegAddress::EIR);
+
+  if (BIT_IS_SET(eir, EIR_RXERIF)) {
+    parent_.postEvent(Event::RX_CHIP_OVERFLOW);
+    parent_.core_.clearETHRegBitField(ControlRegBank::BANK_DONT_CARE,
+                                      ControlRegAddress::EIR, EIR_RXERIF);
+  }
+
+  if (!parent_.txBuffer.empty()) {
+    // We prioritize Tx over Rx.
+    fsm_.pushEvent(FSMEvent::TX_STARTED);
+  } else {
+    fsm_.pushEvent(FSMEvent::RX_STARTED);
+  }
+}
+
+void Receiver::fsmActionRxStartDMA() {
   uint8_t packetCount = parent_.core_.readETHReg(ControlRegBank::BANK_1,
                                                  ControlRegAddress::EPKTCNT);
 
   if (packetCount == 0) {
-    return false;
+    fsm_.pushEvent(FSMEvent::RX_ALL_DONE);
+    return;
   }
 
   if (packetCount > parent_.stats.maxPKTCNT) {
@@ -96,48 +123,6 @@ bool Receiver::receivePacketHeader() {
 
   parent_.dmaTx_.dma->enableStream(parent_.dmaTx_.stream);
   parent_.dmaRx_.dma->enableStream(parent_.dmaRx_.stream);
-
-  return true;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// FSM goes round and round...
-////////////////////////////////////////////////////////////////////////////////
-
-void Receiver::fsmActionActivate() {
-  // We handle interrupt one at a time.
-  // Inspiration taken from the Linux kernel driver.
-  parent_.pinInt_.gpio->disableExternalInterrupt(parent_.pinInt_.pin);
-
-  fsm_.pushEvent(FSMEvent::NOW_ACTIVE);
-}
-
-void Receiver::fsmActionChooseAction() {
-  if (!parent_.txBuffer.empty()) {
-    // We prioritize Tx over Rx.
-    fsm_.pushEvent(FSMEvent::TX_STARTED);
-  } else {
-    fsm_.pushEvent(FSMEvent::RX_STARTED);
-  }
-}
-
-void Receiver::fsmActionCheckEIR() {
-  uint8_t eir = parent_.core_.readETHReg(ControlRegBank::BANK_DONT_CARE,
-                                         ControlRegAddress::EIR);
-
-  if (BIT_IS_SET(eir, EIR_RXERIF)) {
-    parent_.postEvent(Event::RX_CHIP_OVERFLOW);
-    parent_.core_.clearETHRegBitField(ControlRegBank::BANK_DONT_CARE,
-                                      ControlRegAddress::EIR, EIR_RXERIF);
-  }
-
-  // We should always try to do an Rx even regardless of the value of
-  // EIR_PKTIF. See ENC28J60 errata issue 6.
-  if (receivePacketHeader()) {
-    fsm_.pushEvent(FSMEvent::RX_HEADER_READ);
-  } else {
-    fsm_.pushEvent(FSMEvent::RX_ALL_DONE);
-  }
 }
 
 void Receiver::fsmActionRxCleanup() {
@@ -177,7 +162,7 @@ void Receiver::fsmActionRxCleanup() {
   fsm_.pushEvent(FSMEvent::NOW_ACTIVE);
 }
 
-void Receiver::fsmActionTxPrepare(void) {
+void Receiver::fsmActionTxStartDMA(void) {
   parent_.txBuffer.pop(currentTxPacket_);
 
   parent_.core_.writeControlReg(
@@ -265,21 +250,20 @@ void Receiver::fsmActionDeactivate() {
     {FSMState::IDLE,            FSMEvent::INTERRUPT,        &Receiver::fsmActionActivate,     FSMState::ACTIVE},
     {FSMState::IDLE,            FSMEvent::TX_REQUESTED,     &Receiver::fsmActionActivate,     FSMState::ACTIVE},
     
-    {FSMState::ACTIVE,          FSMEvent::NOW_ACTIVE,       &Receiver::fsmActionChooseAction, FSMState::ACTIVE},
+    {FSMState::ACTIVE,          FSMEvent::NOW_ACTIVE,       &Receiver::fsmActionCheckEIR,     FSMState::ACTIVE},
     
     // Rx path
-    {FSMState::ACTIVE,          FSMEvent::RX_STARTED,       &Receiver::fsmActionCheckEIR,     FSMState::RX_EIR_CHECKED},
-    {FSMState::RX_EIR_CHECKED,  FSMEvent::RX_HEADER_READ,   nullptr,                          FSMState::RX_DMA_PENDING},
+    {FSMState::ACTIVE,          FSMEvent::RX_STARTED,       &Receiver::fsmActionRxStartDMA,   FSMState::RX_DMA_PENDING},
     {FSMState::RX_DMA_PENDING,  FSMEvent::RX_DMA_COMPLETE,  &Receiver::fsmActionRxCleanup,    FSMState::ACTIVE},
     
     // Tx path
-    {FSMState::ACTIVE,          FSMEvent::TX_STARTED,       &Receiver::fsmActionTxPrepare,    FSMState::TX_DMA_PENDING},
+    {FSMState::ACTIVE,          FSMEvent::TX_STARTED,       &Receiver::fsmActionTxStartDMA,   FSMState::TX_DMA_PENDING},
     {FSMState::TX_DMA_PENDING,  FSMEvent::TX_DMA_COMPLETE,  &Receiver::fsmActionTxCleanup,    FSMState::TX_WAITING},
     {FSMState::TX_WAITING,      FSMEvent::TX_NOT_DONE_YET,  &Receiver::fsmActionTxWait,       FSMState::TX_WAITING},
     {FSMState::TX_WAITING,      FSMEvent::TX_DONE,          nullptr,                          FSMState::ACTIVE},
     
     // Deactivation
-    {FSMState::RX_EIR_CHECKED,  FSMEvent::RX_ALL_DONE,      &Receiver::fsmActionDeactivate,   FSMState::IDLE},
+    {FSMState::RX_DMA_PENDING,  FSMEvent::RX_ALL_DONE,      &Receiver::fsmActionDeactivate,   FSMState::IDLE},
     
     FSM::TransitionTerminator,
     // clang-format on

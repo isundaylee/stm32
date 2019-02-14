@@ -27,9 +27,6 @@ private:
   uint8_t devNullFrame_;
   uint16_t devNullHeader_[PACKET_HEADER_SIZE];
 
-  // FSM helper functions
-  bool receivePacketHeader();
-
   void handleTxDMAEvent(DMA::StreamEvent event);
   void handleRxDMAEvent(DMA::StreamEvent event);
   friend void handleTxDMAEventWrapper(DMA::StreamEvent event, void* context);
@@ -43,7 +40,6 @@ private:
     NOW_ACTIVE,
 
     RX_STARTED,
-    RX_HEADER_READ,
     RX_DMA_COMPLETE,
     RX_ALL_DONE,
 
@@ -56,7 +52,7 @@ private:
   enum class FSMState {
     IDLE,
     ACTIVE,
-    RX_EIR_CHECKED,
+
     RX_DMA_PENDING,
 
     TX_DMA_PENDING,
@@ -67,13 +63,17 @@ private:
   FSM fsm_;
 
   void fsmActionActivate(void);
-  void fsmActionChooseAction(void);
+  
   void fsmActionCheckEIR(void);
+
+  void fsmActionRxStartDMA(void);
   void fsmActionRxCleanup(void);
-  void fsmActionDeactivate(void);
-  void fsmActionTxPrepare(void);
+
+  void fsmActionTxStartDMA(void);
   void fsmActionTxCleanup(void);
   void fsmActionTxWait(void);
+
+  void fsmActionDeactivate(void);
 
   static FSM::Transition fsmTransitions_[];
 
