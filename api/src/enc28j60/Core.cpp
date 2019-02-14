@@ -141,4 +141,16 @@ void Core::readBufferMemory(uint16_t* data, size_t len) {
   readBufferMemoryEnd();
 }
 
+void Core::writeBufferMemoryStart() {
+  uint16_t header[] = {generateHeaderByte(
+      Opcode::WRITE_BUFFER_MEMORY, ControlRegAddress::READ_BUFFER_MEMORY)};
+
+  parent_.pinCS_.gpio->clear(parent_.pinCS_.pin);
+  parent_.spi_->transact(header, sizeof(header) / sizeof(header[0]));
+}
+
+void Core::writeBufferMemoryEnd() {
+  parent_.pinCS_.gpio->set(parent_.pinCS_.pin);
+}
+
 }; // namespace enc28j60

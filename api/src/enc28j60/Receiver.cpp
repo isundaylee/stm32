@@ -13,6 +13,18 @@ static uint16_t mergeBytes(uint8_t low, uint8_t high) {
   return ((static_cast<uint16_t>(high) << 8) + low);
 }
 
+void Receiver::handleTxDMAEvent(DMA::StreamEvent event) {
+  switch (event.type) {
+  case DMA::StreamEventType::TRANSFER_COMPLETE:
+    fsm_.pushEvent(Receiver::FSM::Event::TX_DMA_COMPLETE);
+    break;
+  }
+}
+
+void handleTxDMAEventWrapper(DMA::StreamEvent event, void* context) {
+  static_cast<Receiver*>(context)->handleTxDMAEvent(event);
+}
+
 void Receiver::handleRxDMAEvent(DMA::StreamEvent event) {
   switch (event.type) {
   case DMA::StreamEventType::TRANSFER_COMPLETE:
@@ -92,6 +104,42 @@ bool Receiver::receivePacketHeader() {
 // FSM goes round and round...
 ////////////////////////////////////////////////////////////////////////////////
 
+void Receiver::fsmActionActivate() {
+  // We handle interrupt one at a time.
+  // Inspiration taken from the Linux kernel driver.
+  parent_.pinInt_.gpio->disableExternalInterrupt(parent_.pinInt_.pin);
+
+  fsm_.pushEvent(FSMEvent::NOW_ACTIVE);
+}
+
+void Receiver::fsmActionChooseAction() {
+  if (!parent_.txBuffer.empty()) {
+    // We prioritize Tx over Rx.
+    fsm_.pushEvent(FSMEvent::TX_STARTED);
+  } else {
+    fsm_.pushEvent(FSMEvent::RX_STARTED);
+  }
+}
+
+void Receiver::fsmActionCheckEIR() {
+  uint8_t eir = parent_.core_.readETHReg(ControlRegBank::BANK_DONT_CARE,
+                                         ControlRegAddress::EIR);
+
+  if (BIT_IS_SET(eir, EIR_RXERIF)) {
+    parent_.postEvent(Event::RX_CHIP_OVERFLOW);
+    parent_.core_.clearETHRegBitField(ControlRegBank::BANK_DONT_CARE,
+                                      ControlRegAddress::EIR, EIR_RXERIF);
+  }
+
+  // We should always try to do an Rx even regardless of the value of
+  // EIR_PKTIF. See ENC28J60 errata issue 6.
+  if (receivePacketHeader()) {
+    fsm_.pushEvent(FSMEvent::RX_HEADER_READ);
+  } else {
+    fsm_.pushEvent(FSMEvent::RX_ALL_DONE);
+  }
+}
+
 void Receiver::fsmActionRxCleanup() {
   parent_.core_.readBufferMemoryEnd();
   parent_.spi_->disableRxDMA();
@@ -126,40 +174,114 @@ void Receiver::fsmActionRxCleanup() {
 
   currentRxPacket_ = nullptr;
 
-  fsm_.pushEvent(FSMEvent::INTERRUPT);
+  fsm_.pushEvent(FSMEvent::NOW_ACTIVE);
 }
 
-void Receiver::fsmActionCheckEIR() {
-  uint8_t eir = parent_.core_.readETHReg(ControlRegBank::BANK_DONT_CARE,
+void Receiver::fsmActionTxPrepare(void) {
+  parent_.txBuffer.pop(currentTxPacket_);
+
+  parent_.core_.writeControlReg(
+      ControlRegBank::BANK_0, ControlRegAddress::ETXSTL, lowByte(CONFIG_ETXST));
+  parent_.core_.writeControlReg(ControlRegBank::BANK_0,
+                                ControlRegAddress::ETXSTH,
+                                highByte(CONFIG_ETXST));
+
+  parent_.core_.writeControlReg(
+      ControlRegBank::BANK_0, ControlRegAddress::EWRPTL, lowByte(CONFIG_ETXST));
+  parent_.core_.writeControlReg(ControlRegBank::BANK_0,
+                                ControlRegAddress::EWRPTH,
+                                highByte(CONFIG_ETXST));
+
+  uint16_t controlByte = 0b00000000;
+
+  parent_.core_.writeBufferMemoryStart();
+  parent_.spi_->transact(&controlByte, 1);
+
+  parent_.spi_->enableTxDMA();
+  parent_.spi_->enableRxDMA();
+  parent_.dmaTx_.dma->enable();
+  parent_.dmaRx_.dma->enable();
+
+  parent_.dmaTx_.dma->configureStream(
+      parent_.dmaTx_.stream, parent_.dmaTx_.channel,
+      DMA::Direction::MEM_TO_PERI, currentTxPacket_->frameLength,
+      DMA::FIFOThreshold::DIRECT, false, DMA::Priority::VERY_HIGH,
+      currentTxPacket_->frame, DMA::Size::BYTE, true,
+      &parent_.spi_->getRaw()->DR, DMA::Size::BYTE, false,
+      handleTxDMAEventWrapper, this);
+  parent_.dmaRx_.dma->configureStream(
+      parent_.dmaRx_.stream, parent_.dmaRx_.channel,
+      DMA::Direction::PERI_TO_MEM, currentTxPacket_->frameLength,
+      DMA::FIFOThreshold::DIRECT, false, DMA::Priority::VERY_HIGH,
+      &parent_.spi_->getRaw()->DR, DMA::Size::BYTE, false,
+      currentTxPacket_->frame, DMA::Size::BYTE, true, nullptr, nullptr);
+
+  parent_.dmaTx_.dma->enableStream(parent_.dmaTx_.stream);
+  parent_.dmaRx_.dma->enableStream(parent_.dmaRx_.stream);
+}
+
+void Receiver::fsmActionTxCleanup(void) {
+  parent_.core_.writeBufferMemoryEnd();
+
+  uint16_t ETXND = CONFIG_ETXST + currentTxPacket_->frameLength;
+
+  parent_.core_.writeControlReg(ControlRegBank::BANK_0,
+                                ControlRegAddress::ETXNDL, lowByte(ETXND));
+  parent_.core_.writeControlReg(ControlRegBank::BANK_0,
+                                ControlRegAddress::ETXNDH, highByte(ETXND));
+
+  parent_.core_.setETHRegBitField(ControlRegBank::BANK_DONT_CARE,
+                                  ControlRegAddress::ECON1, ECON1_TXRTS);
+
+  parent_.packetBuffer_.free(currentTxPacket_);
+
+  fsm_.pushEvent(FSMEvent::TX_NOT_DONE_YET);
+}
+
+void Receiver::fsmActionTxWait(void) {
+  uint8_t EIR = parent_.core_.readETHReg(ControlRegBank::BANK_DONT_CARE,
                                          ControlRegAddress::EIR);
 
-  if (BIT_IS_SET(eir, EIR_RXERIF)) {
-    parent_.postEvent(Event::RX_CHIP_OVERFLOW);
+  if (BIT_IS_SET(EIR, EIR_TXIF)) {
     parent_.core_.clearETHRegBitField(ControlRegBank::BANK_DONT_CARE,
-                                      ControlRegAddress::EIR, EIR_RXERIF);
-  }
+                                      ControlRegAddress::EIR, EIR_TXIF);
 
-  // We should always try to do an Rx even regardless of the value of
-  // EIR_PKTIF. See ENC28J60 errata issue 6.
-  if (receivePacketHeader()) {
-    fsm_.pushEvent(FSMEvent::RX_HEADER_READ);
+    parent_.postEvent(Event::TX_DONE);
+    fsm_.pushEvent(FSMEvent::TX_DONE);
+    fsm_.pushEvent(FSMEvent::NOW_ACTIVE);
   } else {
-    fsm_.pushEvent(FSMEvent::RX_ALL_DONE);
+    fsm_.pushEvent(FSMEvent::TX_NOT_DONE_YET);
   }
 }
 
-void Receiver::fsmActionEnableInt() {
+void Receiver::fsmActionDeactivate() {
   parent_.pinInt_.gpio->enableExternalInterrupt(parent_.pinInt_.pin);
 }
 
 /* static */ Receiver::FSM::Transition Receiver::fsmTransitions_[] = {
     // clang-format off
-    {FSMState::IDLE,        FSMEvent::INTERRUPT,        &Receiver::fsmActionCheckEIR,   FSMState::EIR_CHECKED},
-    {FSMState::EIR_CHECKED, FSMEvent::RX_HEADER_READ,   nullptr,                        FSMState::RX_PENDING},
-    {FSMState::EIR_CHECKED, FSMEvent::RX_ALL_DONE,      &Receiver::fsmActionEnableInt,  FSMState::IDLE},
-    {FSMState::RX_PENDING,  FSMEvent::RX_DMA_COMPLETE,  &Receiver::fsmActionRxCleanup,  FSMState::IDLE},
+    
+    // Activation
+    {FSMState::IDLE,            FSMEvent::INTERRUPT,        &Receiver::fsmActionActivate,     FSMState::ACTIVE},
+    {FSMState::IDLE,            FSMEvent::TX_REQUESTED,     &Receiver::fsmActionActivate,     FSMState::ACTIVE},
+    
+    {FSMState::ACTIVE,          FSMEvent::NOW_ACTIVE,       &Receiver::fsmActionChooseAction, FSMState::ACTIVE},
+    
+    // Rx path
+    {FSMState::ACTIVE,          FSMEvent::RX_STARTED,       &Receiver::fsmActionCheckEIR,     FSMState::RX_EIR_CHECKED},
+    {FSMState::RX_EIR_CHECKED,  FSMEvent::RX_HEADER_READ,   nullptr,                          FSMState::RX_DMA_PENDING},
+    {FSMState::RX_DMA_PENDING,  FSMEvent::RX_DMA_COMPLETE,  &Receiver::fsmActionRxCleanup,    FSMState::ACTIVE},
+    
+    // Tx path
+    {FSMState::ACTIVE,          FSMEvent::TX_STARTED,       &Receiver::fsmActionTxPrepare,    FSMState::TX_DMA_PENDING},
+    {FSMState::TX_DMA_PENDING,  FSMEvent::TX_DMA_COMPLETE,  &Receiver::fsmActionTxCleanup,    FSMState::TX_WAITING},
+    {FSMState::TX_WAITING,      FSMEvent::TX_NOT_DONE_YET,  &Receiver::fsmActionTxWait,       FSMState::TX_WAITING},
+    {FSMState::TX_WAITING,      FSMEvent::TX_DONE,          nullptr,                          FSMState::ACTIVE},
+    
+    // Deactivation
+    {FSMState::RX_EIR_CHECKED,  FSMEvent::RX_ALL_DONE,      &Receiver::fsmActionDeactivate,   FSMState::IDLE},
+    
     FSM::TransitionTerminator,
     // clang-format on
 };
-
 }; // namespace enc28j60

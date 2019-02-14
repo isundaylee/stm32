@@ -107,10 +107,6 @@ void ENC28J60::enableRx() {
 ////////////////////////////////////////////////////////////////////////////////
 
 void ENC28J60::handleInterrupt() {
-  // We handle interrupt one at a time.
-  // Inspiration taken from the Linux kernel driver.
-  pinInt_.gpio->disableExternalInterrupt(pinInt_.pin);
-
   receiver_.fsm_.pushEvent(Receiver::FSM::Event::INTERRUPT);
 }
 
@@ -139,6 +135,15 @@ Packet* ENC28J60::allocatePacket() { return packetBuffer_.allocate(); }
 void ENC28J60::freePacket(Packet* packet) {
   // TODO: Over-reach?
   packetBuffer_.free(packet);
+}
+
+void ENC28J60::transmit(Packet* packet) {
+  if (txBuffer.empty() && receiver_.fsm_.state == Receiver::FSMState::IDLE) {
+    receiver_.fsm_.pushEvent(Receiver::FSMEvent::TX_REQUESTED);
+  }
+
+  // TODO: Error handling?
+  txBuffer.push(packet);
 }
 
 }; // namespace enc28j60

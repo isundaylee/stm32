@@ -30,14 +30,15 @@ public:
 
 private:
   RingBuffer<Event, 16> events_;
-  State state_;
   Parent& parent_;
   // TODO: Investigate. How I wish I had std::array...
   Transition* transitions_;
 
 public:
+  State state;
+
   EmbeddedFSM(State initialState, Parent& parent, Transition* transitions)
-      : state_(initialState), parent_(parent), transitions_(transitions) {}
+      : parent_(parent), transitions_(transitions), state(initialState) {}
 
   bool pushEvent(Event event) { return events_.push(event); }
 
@@ -51,11 +52,11 @@ public:
 
     for (Transition* transition = transitions_; !transition->terminator;
          transition++) {
-      if ((state_ == transition->fromState) && (event == transition->event)) {
+      if ((state == transition->fromState) && (event == transition->event)) {
         if (!!transition->action) {
           (parent_.*(transition->action))();
         }
-        state_ = transition->toState;
+        state = transition->toState;
         return true;
       }
     }

@@ -69,4 +69,12 @@ extern "C" void* memset(void* ptr, int value, size_t num) {
   return ptr;
 }
 
+extern "C" void* memcpy(void* dst, void* src, size_t num) {
+  for (size_t i = 0; i < num; i++) {
+    static_cast<unsigned char*>(dst)[i] = static_cast<unsigned char*>(src)[i];
+  }
+  
+  return dst;
+}
+
 #endif

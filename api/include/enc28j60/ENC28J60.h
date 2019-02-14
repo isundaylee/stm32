@@ -19,6 +19,8 @@ enum Event {
   RX_NEW_PACKET,
   RX_OVERFLOW,
   RX_CHIP_OVERFLOW,
+  TX_DONE,
+  TX_ERROR,
 };
 
 using EventHandler = void (*)(Event event, void* context);
@@ -71,6 +73,7 @@ private:
   void postEvent(Event event);
 
 public:
+  RingBuffer<Packet*, TX_PACKET_BUFFER_SIZE> txBuffer;
   RingBuffer<Packet*, RX_PACKET_BUFFER_SIZE> rxBuffer;
 
   Stats stats;
@@ -89,9 +92,11 @@ public:
 
   Packet* allocatePacket();
   void freePacket(Packet* packet);
+  void transmit(Packet* packet);
 
   friend class Core;
   friend class Receiver;
+  friend class Transmitter;
 };
 
 } // namespace enc28j60

@@ -13,13 +13,15 @@
 #include <enc28j60/ENC28J60.h>
 
 #define DUMP_PACKET_HEADERS 0
-#define DUMP_STATS 1
-#define PRINT_PACKET_INDICATOR 0
+#define DUMP_STATS 0
+#define PRINT_PACKET_INDICATOR 1
 
 enum class Event {
   ETHERNET_RX_NEW_PACKET,
   ETHERNET_RX_OVERFLOW,
   ETHERNET_RX_CHIP_OVERFLOW,
+  ETHERNET_TX_DONE,
+  ETHERNET_TX_ERROR,
   TIMER_INTERRUPT,
 };
 
@@ -69,6 +71,16 @@ void handleEthernetEvent(enc28j60::Event event, void*) {
     events.push(Event::ETHERNET_RX_CHIP_OVERFLOW);
     break;
   }
+
+  case enc28j60::Event::TX_DONE: {
+    events.push(Event::ETHERNET_TX_DONE);
+    break;
+  }
+
+  case enc28j60::Event::TX_ERROR: {
+    events.push(Event::ETHERNET_TX_ERROR);
+    break;
+  }
   }
 }
 
@@ -89,9 +101,7 @@ static void initializeEthernet() {
 
   eth.enableRx();
 
-#if DUMP_STATS
   Timer_2.enable(6000, 16000, handleTimerInterrupt);
-#endif
 }
 
 static void processEthernetRxPackets() {
@@ -138,7 +148,22 @@ static void processEvents() {
       break;
     }
 
+    case Event::ETHERNET_TX_DONE: {
+#if PRINT_PACKET_INDICATOR
+      USART_1.write("D");
+#endif
+      break;
+    }
+
+    case Event::ETHERNET_TX_ERROR: {
+#if PRINT_PACKET_INDICATOR
+      USART_1.write("E");
+#endif
+      break;
+    }
+
     case Event::TIMER_INTERRUPT: {
+#if DUMP_STATS
       USART_1.write("RxBytes = ");
       USART_1.write(DecString(eth.stats.rxBytes, 8));
       USART_1.write(", RxPackets = ");
@@ -150,8 +175,24 @@ static void processEvents() {
       USART_1.write(", RxKbps = ");
       USART_1.write(DecString((eth.stats.rxBytes * 8) >> 10, 2));
       USART_1.write("\r\n");
+#endif
 
       eth.stats.reset();
+
+      // Fake an ICMP echo request packet
+      static uint8_t data[] = {
+          0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x11, 0x22, 0x33, 0x44, 0x55,
+          0x66, 0x08, 0x00, 0x45, 0x00, 0x00, 0x1D, 0xAE, 0x3A, 0x00, 0x00,
+          0x40, 0x01, 0x00, 0x00, 0x0A, 0x00, 0x00, 0xCE, 0x0A, 0x00, 0x00,
+          0xFF, 0x08, 0x00, 0x28, 0x49, 0xCF, 0x95, 0x00, 0x21, 0x00,
+      };
+
+      for (size_t i = 0; i < 4; i++) {
+        auto packet = eth.allocatePacket();
+        packet->frameLength = sizeof(data);
+        memcpy(packet->frame, data, sizeof(data));
+        eth.transmit(packet);
+      }
 
       break;
     }

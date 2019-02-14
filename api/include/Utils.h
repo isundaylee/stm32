@@ -1,7 +1,12 @@
 #pragma once
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
+
+extern "C" {
+void* memset(void* ptr, int value, size_t num);
+void* memcpy(void* dst, void* src, size_t num);
+}
 
 typedef void (*InterruptHandler)(void);
 

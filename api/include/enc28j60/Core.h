@@ -37,6 +37,9 @@ private:
   void readBufferMemory(uint16_t* data, size_t len);
   void readBufferMemoryStart();
   void readBufferMemoryEnd();
+  
+  void writeBufferMemoryStart();
+  void writeBufferMemoryEnd();
 
   friend class ENC28J60;
   friend class Receiver;
