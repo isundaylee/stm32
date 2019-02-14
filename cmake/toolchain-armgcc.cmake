@@ -33,7 +33,7 @@ set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 add_compile_options(
     -mthumb
     -mcpu=cortex-m4
-    -mfloat-abi=soft
+    -mfloat-abi=hard
     -fno-exceptions
 
     -O3

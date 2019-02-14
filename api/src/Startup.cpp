@@ -1,3 +1,5 @@
+#include <DeviceHeader.h>
+
 #include <stdint.h>
 
 extern "C" void _startup(void);
@@ -63,6 +65,11 @@ extern "C" void _startup(void) {
   for (void (**p)() = &__init_array_start__; p < &__init_array_end__; p++) {
     (*p)();
   }
+
+  // Enable FPU
+  SCB->CPACR |= (3UL << 20) | (3UL << 22);
+  __DSB();
+  __ISB();
 
   main();
 }

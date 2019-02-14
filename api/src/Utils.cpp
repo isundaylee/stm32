@@ -1,6 +1,10 @@
 #include <Utils.h>
 
+#include <USART.h>
+
 #if 1
+
+constexpr USART& USART_DEBUG = USART_1;
 
 const char* HexString(uint32_t n, size_t len /*=0*/) {
   static char buffer[11];
@@ -73,8 +77,12 @@ extern "C" void* memcpy(void* dst, void* src, size_t num) {
   for (size_t i = 0; i < num; i++) {
     static_cast<unsigned char*>(dst)[i] = static_cast<unsigned char*>(src)[i];
   }
-  
+
   return dst;
+}
+
+extern "C" void _putchar(char ch) {
+  USART_DEBUG.write(static_cast<uint8_t>(ch));
 }
 
 #endif

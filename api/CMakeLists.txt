@@ -21,7 +21,7 @@ target_include_directories(STM32F446Lib
         ${CMAKE_CURRENT_SOURCE_DIR}/include/stm32f446
     )
 
-target_link_libraries(STM32F446Lib CMSIS)
+target_link_libraries(STM32F446Lib CMSIS printf)
 
 target_compile_options(STM32F446Lib
     PRIVATE

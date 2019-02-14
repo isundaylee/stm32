@@ -1,5 +1,7 @@
 #include <Utils.h>
 
+#include <printf.h>
+
 #include <Clock.h>
 #include <DMA.h>
 #include <Flash.h>
@@ -37,21 +39,20 @@ static auto state = State::IDLE;
 template <typename T> T min(T a, T b) { return (a < b ? a : b); }
 
 #if DUMP_PACKET_HEADERS
-static void dumpPacketHeader(ENC28J60::Packet* packet) {
-  USART_1.write("[");
+static void dumpPacketHeader(enc28j60::Packet* packet) {
+  printf("[");
   for (size_t i = 0; i < 6; i++) {
-    USART_1.write(HexString(packet->header[i], 2));
+    printf("0x%02x", packet->header[i]);
     if (i != 5) {
-      USART_1.write(" ");
+      printf(" ");
     }
   }
-  USART_1.write("]");
+  printf("]");
 
   for (size_t i = 0; i < min<size_t>(packet->frameLength, 12); i++) {
-    USART_1.write(" ");
-    USART_1.write(HexString(packet->frame[i], 2));
+    printf(" 0x%02x", packet->frame[i]);
   }
-  USART_1.write("\r\n");
+  printf("\r\n");
 }
 #endif
 
@@ -91,13 +92,13 @@ static void initializeEthernet() {
              DMA::Channel{&DMA_1, 4, 0}, DMA::Channel{&DMA_1, 3, 0},
              enc28j60::Mode::FULL_DUPLEX, handleEthernetEvent, nullptr);
 
-  USART_1.write("Waiting for link");
+  printf("Waiting for link");
   while (!eth.linkIsUp()) {
-    USART_1.write(".");
+    printf(".");
     DELAY(1000000);
   }
-  USART_1.write("\r\n");
-  USART_1.write("Link is up!\r\n");
+  printf("\r\n");
+  printf("Link is up!\r\n");
 
   eth.enableRx();
 
@@ -110,7 +111,7 @@ static void processEthernetRxPackets() {
     eth.rxBuffer.pop(packet);
 
 #if PRINT_PACKET_INDICATOR
-    USART_1.write(".");
+    printf(".");
 #endif
 
 #if DUMP_PACKET_HEADERS
@@ -136,45 +137,39 @@ static void processEvents() {
 
     case Event::ETHERNET_RX_OVERFLOW: {
 #if PRINT_PACKET_INDICATOR
-      USART_1.write("O");
+      printf("O");
 #endif
       break;
     }
 
     case Event::ETHERNET_RX_CHIP_OVERFLOW: {
 #if PRINT_PACKET_INDICATOR
-      USART_1.write("C");
+      printf("C");
 #endif
       break;
     }
 
     case Event::ETHERNET_TX_DONE: {
 #if PRINT_PACKET_INDICATOR
-      USART_1.write("D");
+      printf("D");
 #endif
       break;
     }
 
     case Event::ETHERNET_TX_ERROR: {
 #if PRINT_PACKET_INDICATOR
-      USART_1.write("E");
+      printf("E");
 #endif
       break;
     }
 
     case Event::TIMER_INTERRUPT: {
 #if DUMP_STATS
-      USART_1.write("RxBytes = ");
-      USART_1.write(DecString(eth.stats.rxBytes, 8));
-      USART_1.write(", RxPackets = ");
-      USART_1.write(DecString(eth.stats.rxPackets, 5));
-      USART_1.write(", RxPacketsLostInDriver = ");
-      USART_1.write(DecString(eth.stats.rxPacketsLostInDriver, 5));
-      USART_1.write(", MaxPKTCNT = ");
-      USART_1.write(DecString(eth.stats.maxPKTCNT, 3));
-      USART_1.write(", RxKbps = ");
-      USART_1.write(DecString((eth.stats.rxBytes * 8) >> 10, 2));
-      USART_1.write("\r\n");
+      printf("RxBytes = %8d, RxPackets = %5d, RxPacketsLostInDriver = %5d, "
+             "MaxPKTCNT = %3d, RxKbps = %2d\r\n",
+             eth.stats.rxBytes, eth.stats.rxPackets,
+             eth.stats.rxPacketsLostInDriver, eth.stats.maxPKTCNT,
+             (eth.stats.rxBytes * 8) >> 10);
 #endif
 
       eth.stats.reset();
@@ -236,7 +231,7 @@ extern "C" void main() {
   GPIO_C.set(8);
   GPIO_C.setMode(9, GPIO::PinMode::INPUT);
 
-  USART_1.write("Hello, SPI ENC28J60!\r\n");
+  printf("Hello, SPI ENC28J60!\r\n");
 
   initializeEthernet();
 
