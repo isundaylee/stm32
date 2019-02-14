@@ -6,17 +6,23 @@
 #include <DMA.h>
 #include <Flash.h>
 #include <GPIO.h>
+#include <RingBuffer.h>
 #include <SPI.h>
 #include <Timer.h>
 #include <USART.h>
-
-#include <RingBuffer.h>
 
 #include <enc28j60/ENC28J60.h>
 
 #define DUMP_PACKET_HEADERS 0
 #define DUMP_STATS 0
 #define PRINT_PACKET_INDICATOR 1
+
+static const uint8_t MAC1 = 0xB0;
+static const uint8_t MAC2 = 0xD5;
+static const uint8_t MAC3 = 0x08;
+static const uint8_t MAC4 = 0xA5;
+static const uint8_t MAC5 = 0x38;
+static const uint8_t MAC6 = 0x42;
 
 enum class Event {
   ETHERNET_RX_NEW_PACKET,
@@ -105,6 +111,33 @@ static void initializeEthernet() {
   Timer_2.enable(6000, 16000, handleTimerInterrupt);
 }
 
+uint16_t calculateChecksum(uint8_t const* data, size_t len) {
+  uint32_t checksum = 0;
+
+  while (len > 1) {
+    uint32_t chunk =
+        static_cast<uint32_t>(data[1]) + (static_cast<uint32_t>(data[0]) << 8);
+
+    checksum += chunk;
+    if ((checksum >> 16) != 0) {
+      checksum = (checksum & 0xFFFF) + 1;
+    }
+
+    len -= 2;
+    data += 2;
+  }
+
+  if (len == 1) {
+    checksum += data[0];
+  }
+
+  while ((checksum >> 16) != 0) {
+    checksum = (checksum & 0xFFFF) + 1;
+  }
+
+  return ~static_cast<uint16_t>(checksum);
+}
+
 static void processEthernetRxPackets() {
   while (!eth.rxBuffer.empty()) {
     enc28j60::Packet* packet{};
@@ -118,7 +151,99 @@ static void processEthernetRxPackets() {
     dumpPacketHeader(packet);
 #endif
 
-    eth.freePacket(packet);
+    uint8_t* f = packet->frame;
+
+    // Check if the packet is for us
+    if ((f[0] != MAC1) || (f[1] != MAC2) || (f[2] != MAC3) || (f[3] != MAC4) ||
+        (f[4] != MAC5) || (f[5] != MAC6)) {
+      eth.freePacket(packet);
+      continue;
+    }
+
+    // Check if the packet is an IPv4 packet
+    if ((f[12] != 0x08) || (f[13] != 0x00)) {
+      eth.freePacket(packet);
+      continue;
+    }
+
+    // Check if the packet is an ICMP packet
+    if (f[23] != 0x01) {
+      eth.freePacket(packet);
+      continue;
+    }
+
+    // Check if the packet is an ICMP ping request
+    if (f[23] != 0x01) {
+      eth.freePacket(packet);
+      continue;
+    }
+
+    // Fake an ICMP echo request packet
+    static uint8_t headerTemplate[] = {
+        // Ethernet header
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Destination MAC (needs change)
+        MAC1, MAC2, MAC3, MAC4, MAC5, MAC6, // Source MAC
+        0x08, 0x00,                         // Ethertype
+        // IP header
+        0x45,                   // Version, Header Length
+        0x00,                   // ECN
+        0x00, 0x00,             // Total Length (needs change)
+        0x00, 0x3A,             // IP ID
+        0x00, 0x00,             // Frag Flags
+        0x40,                   // TTL
+        0x01,                   // IP Protocol
+        0x00, 0x00,             // Header Checksum
+        0x0A, 0x00, 0x00, 0xCE, // Source IP
+        0x00, 0x00, 0x00, 0x00, // Destination IP (needs change)
+        // ICMP header
+        0x00,       // Type
+        0x00,       // Code
+        0x00, 0x00, // Checksum (needs change)
+        0xCF, 0x95, // ID (needs change)
+        0x00, 0x21  // Seq num (needs change)
+    };
+
+    // Destination MAC
+    headerTemplate[0] = f[6];
+    headerTemplate[1] = f[7];
+    headerTemplate[2] = f[8];
+    headerTemplate[3] = f[9];
+    headerTemplate[4] = f[10];
+    headerTemplate[5] = f[11];
+
+    // Destination IP
+    headerTemplate[30] = f[26];
+    headerTemplate[31] = f[27];
+    headerTemplate[32] = f[28];
+    headerTemplate[33] = f[29];
+
+    // ICMP Echo ID and Seq
+    headerTemplate[38] = f[38];
+    headerTemplate[39] = f[39];
+    headerTemplate[40] = f[40];
+    headerTemplate[41] = f[41];
+
+    // Calculate IP total length
+    packet->frameLength -= 4; // Remove CRC lengh
+    uint16_t ipTotalLength = packet->frameLength - 14;
+    headerTemplate[16] = static_cast<uint8_t>((ipTotalLength & 0xFF00) >> 8);
+    headerTemplate[17] = static_cast<uint8_t>(ipTotalLength & 0x00FF);
+
+    // No need to set frameLength: we're reusing the same buffer
+    memcpy(f, headerTemplate, sizeof(headerTemplate));
+    // No need to copy the data: we're reusing the same buffer
+
+    // Calculate IP checksum
+    uint16_t ipcheckSum = calculateChecksum(&f[14], 20);
+    f[24] = static_cast<uint8_t>((ipcheckSum & 0xFF00) >> 8);
+    f[25] = static_cast<uint8_t>(ipcheckSum & 0x00FF);
+
+    // Calculate ICMP checksum
+    uint16_t icmpChecksum = calculateChecksum(&f[34], packet->frameLength - 34);
+    f[36] = static_cast<uint8_t>((icmpChecksum & 0xFF00) >> 8);
+    f[37] = static_cast<uint8_t>(icmpChecksum & 0x00FF);
+
+    eth.transmit(packet);
   }
 }
 
@@ -173,22 +298,6 @@ static void processEvents() {
 #endif
 
       eth.stats.reset();
-
-      // Fake an ICMP echo request packet
-      static uint8_t data[] = {
-          0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x11, 0x22, 0x33, 0x44, 0x55,
-          0x66, 0x08, 0x00, 0x45, 0x00, 0x00, 0x1D, 0xAE, 0x3A, 0x00, 0x00,
-          0x40, 0x01, 0x00, 0x00, 0x0A, 0x00, 0x00, 0xCE, 0x0A, 0x00, 0x00,
-          0xFF, 0x08, 0x00, 0x28, 0x49, 0xCF, 0x95, 0x00, 0x21, 0x00,
-      };
-
-      for (size_t i = 0; i < 4; i++) {
-        auto packet = eth.allocatePacket();
-        packet->frameLength = sizeof(data);
-        memcpy(packet->frame, data, sizeof(data));
-        eth.transmit(packet);
-      }
-
       break;
     }
     }

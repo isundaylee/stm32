@@ -15,7 +15,7 @@ void ENC28J60::initializeMAC() {
   core_.writeControlReg(ControlRegBank::BANK_2, ControlRegAddress::MACON1,
                         MACON1_MARXEN | MACON1_TXPAUS | MACON1_RXPAUS);
   core_.writeControlReg(ControlRegBank::BANK_2, ControlRegAddress::MACON3,
-                        MACON3_PADCFG0 | MACON3_FRMLNEN | MACON3_FULDPX);
+                        MACON3_PADCFG0 | MACON3_TXCRCEN | MACON3_FULDPX);
   core_.writeControlReg(ControlRegBank::BANK_2, ControlRegAddress::MACON4,
                         MACON4_DEFER);
 
