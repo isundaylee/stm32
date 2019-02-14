@@ -76,7 +76,7 @@ public:
   Stats stats;
 
   // High-level interface
-  ENC28J60() : core_{}, receiver_(*this) {}
+  ENC28J60() : core_(*this), receiver_(*this) {}
 
   void enable(SPI* spi, GPIO::Pin pinCS, GPIO::Pin pinInt, DMA::Channel dmaTx,
               DMA::Channel dmaRx, Mode mode, EventHandler eventHandler,
@@ -90,6 +90,7 @@ public:
   Packet* allocatePacket();
   void freePacket(Packet* packet);
 
+  friend class Core;
   friend class Receiver;
 };
 

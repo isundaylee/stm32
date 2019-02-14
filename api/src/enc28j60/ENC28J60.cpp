@@ -85,8 +85,6 @@ void ENC28J60::enable(SPI* spi, GPIO::Pin pinCS, GPIO::Pin pinInt,
   eventHandler_ = eventHandler;
   eventHandlerContext_ = eventHandlerContext;
 
-  core_.enable(spi, pinCS, pinInt);
-
   pinInt_.gpio->setupExternalInterrupt(pinInt_.pin,
                                        GPIO::TriggerDirection::FALLING_EDGE,
                                        handleInterruptWrapper, this);

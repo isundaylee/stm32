@@ -8,21 +8,18 @@
 
 namespace enc28j60 {
 
+class ENC28J60;
+class Receiver;
+
 class Core {
 private:
-  // Peripheral dependencies
-  SPI* spi_;
-  GPIO::Pin pinCS_;
-  GPIO::Pin pinInt_;
+  ENC28J60& parent_;
 
   ControlRegBank currentBank_ = ControlRegBank::BANK_DONT_CARE;
 
+  Core(ENC28J60& parent) : parent_(parent) {}
+
   void selectControlRegBank(ControlRegBank bank);
-
-public:
-  Core() {}
-
-  void enable(SPI* spi, GPIO::Pin pinCS, GPIO::Pin pinInt);
 
   void setETHRegBitField(ControlRegBank bank, ControlRegAddress addr,
                          uint8_t bits);
@@ -40,6 +37,9 @@ public:
   void readBufferMemory(uint16_t* data, size_t len);
   void readBufferMemoryStart();
   void readBufferMemoryEnd();
+
+  friend class ENC28J60;
+  friend class Receiver;
 };
 
 }; // namespace enc28j60
