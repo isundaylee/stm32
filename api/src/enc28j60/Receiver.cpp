@@ -42,7 +42,7 @@ bool Receiver::receivePacketHeader() {
   }
 
   // Allocate the new RX packet
-  currentRxPacket_ = rxPacketBuffer_.allocate();
+  currentRxPacket_ = parent_.packetBuffer_.allocate();
 
   // Reader packet header and calculate frame size
   uint16_t* packetHeader =

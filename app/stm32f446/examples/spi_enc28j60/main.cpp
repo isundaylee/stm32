@@ -107,7 +107,7 @@ static void processEthernetRxPackets() {
     dumpPacketHeader(packet);
 #endif
 
-    eth.freeRxPacket(packet);
+    eth.freePacket(packet);
   }
 }
 

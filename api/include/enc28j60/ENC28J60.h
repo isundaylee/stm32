@@ -56,6 +56,8 @@ private:
   Core core_;
   Receiver receiver_;
 
+  FreeListBuffer<Packet, PACKET_BUFFER_SIZE> packetBuffer_;
+
   // Initialization routines
   void initializeETH();
   void initializeMAC();
@@ -85,7 +87,8 @@ public:
 
   bool linkIsUp();
 
-  void freeRxPacket(Packet* packet);
+  Packet* allocatePacket();
+  void freePacket(Packet* packet);
 
   friend class Receiver;
 };

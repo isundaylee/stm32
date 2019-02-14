@@ -136,9 +136,11 @@ bool ENC28J60::linkIsUp() {
   return BIT_IS_SET(core_.readPHYReg(PHYRegAddress::PHSTAT1), PHSTAT1_LLSTAT);
 }
 
-void ENC28J60::freeRxPacket(Packet* packet) {
+Packet* ENC28J60::allocatePacket() { return packetBuffer_.allocate(); }
+
+void ENC28J60::freePacket(Packet* packet) {
   // TODO: Over-reach?
-  receiver_.rxPacketBuffer_.free(packet);
+  packetBuffer_.free(packet);
 }
 
 }; // namespace enc28j60

@@ -21,7 +21,6 @@ private:
   ENC28J60& parent_;
 
   // Rx packet buffer
-  FreeListBuffer<Packet, RX_PACKET_BUFFER_SIZE> rxPacketBuffer_;
   Packet* currentRxPacket_ = nullptr;
   uint8_t devNullFrame_;
   uint16_t devNullHeader_[PACKET_HEADER_SIZE];
