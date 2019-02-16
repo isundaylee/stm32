@@ -1,8 +1,11 @@
 #pragma once
 
+#include <Utils.h>
+
 #include <RingBuffer.h>
 
-template <typename Parent, typename StateType, typename EventType>
+template <typename Parent, typename StateType, typename EventType,
+          bool Debug = false>
 class EmbeddedFSM {
 public:
   using State = StateType;
@@ -56,12 +59,18 @@ public:
         if (!!transition->action) {
           (parent_.*(transition->action))();
         }
+        if (Debug) {
+          DEBUG_PRINT("%x", transition - transitions_);
+        }
         state = transition->toState;
         return true;
       }
     }
 
     // TODO: Non-matching??
+    if (Debug) {
+      DEBUG_PRINT("X");
+    }
     return true;
   }
 };

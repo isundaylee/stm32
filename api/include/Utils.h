@@ -3,6 +3,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <printf.h>
+
 extern "C" {
 void* memset(void* ptr, int value, size_t num);
 void* memcpy(void* dst, void* src, size_t num);
@@ -36,6 +38,8 @@ typedef void (*InterruptHandler)(void);
 #define FORCE_READ(reg) ((void)reg)
 
 #define E2I(e) (static_cast<uint32_t>(e))
+
+#define DEBUG_PRINT(...) printf(__VA_ARGS__)
 
 #if 1
 
