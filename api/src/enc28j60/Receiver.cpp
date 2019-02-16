@@ -86,7 +86,6 @@ void Receiver::fsmActionRxStartDMA() {
   // Reader packet header and calculate frame size
   uint16_t* packetHeader =
       (!!currentRxPacket_ ? currentRxPacket_->header : devNullHeader_);
-  size_t frameLen;
 
   uint8_t ERDPTL = parent_.core_.readETHReg(ControlRegBank::BANK_0,
                                             ControlRegAddress::ERDPTL);
@@ -97,8 +96,16 @@ void Receiver::fsmActionRxStartDMA() {
   printf("\r\n0x%04x vs 0x%04x\r\n", ERDPT, parent_.core_.currentReadPointer_);
 
   parent_.core_.readBufferMemory(packetHeader, PACKET_HEADER_SIZE);
-  frameLen = static_cast<size_t>(packetHeader[2]) +
-             (static_cast<size_t>(packetHeader[3]) << 8);
+
+  size_t frameLen = mergeBytes(packetHeader[2], packetHeader[3]);
+  uint16_t expectedNext =
+      (parent_.core_.currentReadPointer_ + (frameLen + (frameLen % 2))) %
+      (CONFIG_ERXND + 1);
+  uint16_t actualNext = mergeBytes(packetHeader[0], packetHeader[1]);
+
+  if (expectedNext != actualNext) {
+    DEBUG_ASSERT(false, "Corrupt Rx packet header.");
+  }
 
   if (!!currentRxPacket_) {
     currentRxPacket_->frameLength = frameLen;
