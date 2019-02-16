@@ -316,7 +316,7 @@ static void processEvents() {
 
 extern "C" void main() {
   Flash::setLatency(9);
-  Clock::configureAPB1Prescaler(Clock::APBPrescaler::DIV_2);
+  Clock::configureAPB1Prescaler(Clock::APBPrescaler::DIV_4);
   Clock::configurePLL(8, 96);
   Clock::switchSysclk(Clock::SysclkSource::PLL);
 
@@ -335,7 +335,7 @@ extern "C" void main() {
   GPIO_B.setMode(15, GPIO::PinMode::ALTERNATE, 5); // MOSI
   SPI_2.configureMaster(SPI::ClockPolarity::IDLE_LOW,
                         SPI::ClockPhase::SAMPLE_ON_FIRST_EDGE,
-                        SPI::DataFrameFormat::BYTE, SPI::BaudRate::PCLK_OVER_4,
+                        SPI::DataFrameFormat::BYTE, SPI::BaudRate::PCLK_OVER_2,
                         SPI::NSSMode::MANUAL);
   SPI_2.enable();
 
