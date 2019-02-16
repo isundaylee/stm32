@@ -59,7 +59,7 @@ private:
     TX_WAITING,
   };
 
-  using FSM = EmbeddedFSM<Receiver, FSMState, FSMEvent>;
+  using FSM = EmbeddedFSM<Receiver, FSMState, FSMEvent, true>;
   FSM fsm_;
 
   void fsmActionActivate(void);
