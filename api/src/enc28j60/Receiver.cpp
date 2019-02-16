@@ -88,6 +88,14 @@ void Receiver::fsmActionRxStartDMA() {
       (!!currentRxPacket_ ? currentRxPacket_->header : devNullHeader_);
   size_t frameLen;
 
+  uint8_t ERDPTL = parent_.core_.readETHReg(ControlRegBank::BANK_0,
+                                            ControlRegAddress::ERDPTL);
+  uint8_t ERDPTH = parent_.core_.readETHReg(ControlRegBank::BANK_0,
+                                            ControlRegAddress::ERDPTH);
+  uint16_t ERDPT = mergeBytes(ERDPTL, ERDPTH);
+
+  printf("\r\n0x%04x\r\n", ERDPT);
+
   parent_.core_.readBufferMemory(packetHeader, PACKET_HEADER_SIZE);
   frameLen = static_cast<size_t>(packetHeader[2]) +
              (static_cast<size_t>(packetHeader[3]) << 8);
