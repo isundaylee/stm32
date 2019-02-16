@@ -112,7 +112,7 @@ void Receiver::fsmActionRxStartDMA() {
   parent_.dmaTx_.dma->configureStream(
       parent_.dmaTx_.stream, parent_.dmaTx_.channel,
       DMA::Direction::MEM_TO_PERI, transactionSize, DMA::FIFOThreshold::DIRECT,
-      false, DMA::Priority::VERY_HIGH, rxDst, DMA::Size::BYTE, rxDstInc,
+      false, DMA::Priority::HIGH, rxDst, DMA::Size::BYTE, rxDstInc,
       &parent_.spi_->getRaw()->DR, DMA::Size::BYTE, false, nullptr, nullptr);
   parent_.dmaRx_.dma->configureStream(
       parent_.dmaRx_.stream, parent_.dmaRx_.channel,
