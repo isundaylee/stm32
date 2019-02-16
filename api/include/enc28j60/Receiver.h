@@ -40,6 +40,7 @@ private:
     NOW_ACTIVE,
 
     RX_STARTED,
+    RX_BAD_HEADER,
     RX_DMA_COMPLETE,
     RX_ALL_DONE,
 
@@ -67,6 +68,7 @@ private:
   void fsmActionCheckEIR(void);
 
   void fsmActionRxStartDMA(void);
+  void fsmActionRxReset(void);
   void fsmActionRxCleanup(void);
 
   void fsmActionTxStartDMA(void);

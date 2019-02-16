@@ -80,34 +80,65 @@ void ENC28J60::enable(SPI* spi, GPIO::Pin pinCS, GPIO::Pin pinInt,
 }
 
 void ENC28J60::enableRx() {
-  core_.currentReadPointer_ = 0;
+  resetRx();
 
+  core_.setETHRegBitField(ControlRegBank::BANK_0, ControlRegAddress::EIE,
+                          EIE_INTIE | EIE_PKTIE | EIE_RXERIE);
+
+  pinInt_.gpio->enableExternalInterrupt(pinInt_.pin);
+}
+
+void ENC28J60::resetRx() {
+  // Clear RXEN first
+  core_.clearETHRegBitField(ControlRegBank::BANK_0, ControlRegAddress::ECON1,
+                            ECON1_RXEN);
+
+  // Pulse RXRST
+  core_.setETHRegBitField(ControlRegBank::BANK_0, ControlRegAddress::ECON1,
+                          ECON1_RXRST);
+  core_.clearETHRegBitField(ControlRegBank::BANK_0, ControlRegAddress::ECON1,
+                            ECON1_RXRST);
+
+  // Clear EPKTCNT
+  while (core_.readETHReg(ControlRegBank::BANK_1, ControlRegAddress::EPKTCNT) !=
+         0) {
+    core_.setETHRegBitField(ControlRegBank::BANK_0, ControlRegAddress::ECON2,
+                            ECON2_PKTDEC);
+  }
+
+  // Reset Rx FIFO settings
   core_.writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXSTL,
                         lowByte(CONFIG_ERXST));
   core_.writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXSTH,
                         highByte(CONFIG_ERXST));
+
   core_.writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXNDL,
                         lowByte(CONFIG_ERXND));
   core_.writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXNDH,
                         highByte(CONFIG_ERXND));
+
+  core_.currentReadPointer_ = 0;
   core_.writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERDPTL,
                         lowByte(CONFIG_ERXST));
   core_.writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERDPTH,
                         highByte(CONFIG_ERXST));
+
+  // See ENC28J60 errata issue 14
   core_.writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXRDPTL,
                         lowByte(CONFIG_ERXND));
   core_.writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXRDPTH,
                         highByte(CONFIG_ERXND));
 
+  // Reset Rx filter settings
   core_.writeControlReg(ControlRegBank::BANK_1, ControlRegAddress::ERXFCON,
                         0x00);
 
+  core_.clearETHRegBitField(ControlRegBank::BANK_DONT_CARE,
+                            ControlRegAddress::EIR, EIR_RXERIF);
+
+  // Set RXEN back on
   core_.setETHRegBitField(ControlRegBank::BANK_0, ControlRegAddress::ECON1,
                           ECON1_RXEN);
-  core_.setETHRegBitField(ControlRegBank::BANK_0, ControlRegAddress::EIE,
-                          EIE_INTIE | EIE_PKTIE | EIE_RXERIE);
-
-  pinInt_.gpio->enableExternalInterrupt(pinInt_.pin);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -87,14 +87,6 @@ void Receiver::fsmActionRxStartDMA() {
   uint16_t* packetHeader =
       (!!currentRxPacket_ ? currentRxPacket_->header : devNullHeader_);
 
-  uint8_t ERDPTL = parent_.core_.readETHReg(ControlRegBank::BANK_0,
-                                            ControlRegAddress::ERDPTL);
-  uint8_t ERDPTH = parent_.core_.readETHReg(ControlRegBank::BANK_0,
-                                            ControlRegAddress::ERDPTH);
-  uint16_t ERDPT = mergeBytes(ERDPTL, ERDPTH);
-
-  printf("\r\n0x%04x vs 0x%04x\r\n", ERDPT, parent_.core_.currentReadPointer_);
-
   parent_.core_.readBufferMemory(packetHeader, PACKET_HEADER_SIZE);
 
   size_t frameLen = mergeBytes(packetHeader[2], packetHeader[3]);
@@ -104,7 +96,8 @@ void Receiver::fsmActionRxStartDMA() {
   uint16_t actualNext = mergeBytes(packetHeader[0], packetHeader[1]);
 
   if (expectedNext != actualNext) {
-    DEBUG_ASSERT(false, "Corrupt Rx packet header.");
+    fsm_.pushEvent(FSMEvent::RX_BAD_HEADER);
+    return;
   }
 
   if (!!currentRxPacket_) {
@@ -138,6 +131,16 @@ void Receiver::fsmActionRxStartDMA() {
 
   parent_.dmaTx_.dma->enableStream(parent_.dmaTx_.stream);
   parent_.dmaRx_.dma->enableStream(parent_.dmaRx_.stream);
+}
+
+void Receiver::fsmActionRxReset() {
+  if (!!currentRxPacket_) {
+    parent_.packetBuffer_.free(currentRxPacket_);
+  }
+
+  parent_.resetRx();
+
+  fsm_.pushEvent(FSMEvent::NOW_ACTIVE);
 }
 
 void Receiver::fsmActionRxCleanup() {
@@ -271,6 +274,7 @@ void Receiver::fsmActionDeactivate() {
     
     // Rx path
     {FSMState::ACTIVE,          FSMEvent::RX_STARTED,       &Receiver::fsmActionRxStartDMA,   FSMState::RX_DMA_PENDING},
+    {FSMState::RX_DMA_PENDING,  FSMEvent::RX_BAD_HEADER,    &Receiver::fsmActionRxReset,      FSMState::ACTIVE},
     {FSMState::RX_DMA_PENDING,  FSMEvent::RX_DMA_COMPLETE,  &Receiver::fsmActionRxCleanup,    FSMState::ACTIVE},
     
     // Tx path

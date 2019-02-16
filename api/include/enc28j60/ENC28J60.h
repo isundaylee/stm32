@@ -29,6 +29,7 @@ struct Stats {
   size_t rxPackets = 0;
   size_t rxBytes = 0;
   size_t rxPacketsLostInDriver = 0;
+  size_t rxResets = 0;
 
   uint8_t maxPKTCNT = 0;
 
@@ -36,6 +37,7 @@ struct Stats {
     rxPackets = 0;
     rxBytes = 0;
     rxPacketsLostInDriver = 0;
+    rxResets = 0;
     maxPKTCNT = 0;
   }
 };
@@ -71,6 +73,8 @@ private:
 
   // Send the lovely event to our dear user's event handler
   void postEvent(Event event);
+
+  void resetRx();
 
 public:
   RingBuffer<Packet*, TX_PACKET_BUFFER_SIZE> txBuffer;
