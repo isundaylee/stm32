@@ -153,6 +153,12 @@ static void processEthernetRxPackets() {
 
     uint8_t* f = packet->frame;
 
+    // Check if the packet length is too short
+    if (packet->frameLength < 42) {
+      eth.freePacket(packet);
+      continue;
+    }
+
     // Check if the packet is for us
     if ((f[0] != MAC1) || (f[1] != MAC2) || (f[2] != MAC3) || (f[3] != MAC4) ||
         (f[4] != MAC5) || (f[5] != MAC6)) {
