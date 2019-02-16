@@ -66,6 +66,9 @@ void ENC28J60::initializeETH() {
   WAIT_UNTIL(BIT_IS_SET(
       core_.readETHReg(ControlRegBank::BANK_0, ControlRegAddress::ESTAT),
       0b00000001));
+
+  // ENC28J60 errata issue 4
+  DELAY(50000);
 }
 
 void ENC28J60::initializePHY() {
