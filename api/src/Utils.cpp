@@ -6,7 +6,7 @@
 #if 1
 
 constexpr USART& USART_DEBUG = USART_1;
-constexpr GPIO::Pin GPIO_DEBUG_ASSERT = {&GPIO_C, 8};
+constexpr GPIO::Pin PIN_DEBUG_0 = {&GPIO_C, 8};
 
 const char* HexString(uint32_t n, size_t len /*=0*/) {
   static char buffer[11];
@@ -87,8 +87,11 @@ extern "C" void _putchar(char ch) {
   USART_DEBUG.write(static_cast<uint8_t>(ch));
 }
 
+void setDebugPin0() { PIN_DEBUG_0.gpio->set(PIN_DEBUG_0.pin); }
+void clearDebugPin0() { PIN_DEBUG_0.gpio->clear(PIN_DEBUG_0.pin); }
+
 void handleAssertionFailure(char const* message) {
-  GPIO_DEBUG_ASSERT.gpio->clear(GPIO_DEBUG_ASSERT.pin);
+  clearDebugPin0();
   printf("\r\nAssertion failure: %s\r\n", message);
   WAIT_UNTIL(false);
 }

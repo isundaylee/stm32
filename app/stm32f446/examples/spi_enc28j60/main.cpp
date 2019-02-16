@@ -151,6 +151,8 @@ static void processEthernetRxPackets() {
     dumpPacketHeader(packet);
 #endif
 
+    DEBUG_PIN_0_PULSE_LOW(1);
+
     uint8_t* f = packet->frame;
 
     // Check if the packet length is too short

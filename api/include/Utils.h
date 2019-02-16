@@ -39,6 +39,8 @@ typedef void (*InterruptHandler)(void);
 
 #define E2I(e) (static_cast<uint32_t>(e))
 
+void setDebugPin0();
+void clearDebugPin0();
 void handleAssertionFailure(char const* message);
 
 #define DEBUG_PRINT(...) printf(__VA_ARGS__)
@@ -47,6 +49,15 @@ void handleAssertionFailure(char const* message);
     if (!(cond)) {                                                             \
       handleAssertionFailure(message);                                         \
     }                                                                          \
+  } while (false)
+
+#define DEBUG_PIN_0_SET setDebugPin0
+#define DEBUG_PIN_0_CLEAR clearDebugPin0
+#define DEBUG_PIN_0_PULSE_LOW(delay)                                           \
+  do {                                                                         \
+    clearDebugPin0();                                                          \
+    DELAY(delay);                                                              \
+    setDebugPin0();                                                            \
   } while (false)
 
 #if 1
