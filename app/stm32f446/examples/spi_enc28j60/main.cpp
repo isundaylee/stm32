@@ -14,8 +14,8 @@
 #include <enc28j60/ENC28J60.h>
 
 #define DUMP_PACKET_HEADERS 0
-#define DUMP_STATS 0
-#define PRINT_PACKET_INDICATOR 1
+#define DUMP_STATS 1
+#define PRINT_PACKET_INDICATOR 0
 
 static const uint8_t MAC1 = 0xB0;
 static const uint8_t MAC2 = 0xD5;
@@ -297,12 +297,16 @@ static void processEvents() {
     }
 
     case Event::TIMER_INTERRUPT: {
+      static size_t totalRxResets = 0;
+
 #if DUMP_STATS
+      totalRxResets += eth.stats.rxResets;
+
       printf("RxBytes = %8d, RxPackets = %5d, RxPacketsLostInDriver = %5d, "
-             "MaxPKTCNT = %3d, RxKbps = %2d\r\n",
+             "MaxPKTCNT = %3d, RxKbps = %5d, RxResets = %3d\r\n",
              eth.stats.rxBytes, eth.stats.rxPackets,
              eth.stats.rxPacketsLostInDriver, eth.stats.maxPKTCNT,
-             (eth.stats.rxBytes * 8) >> 10);
+             (eth.stats.rxBytes * 8) >> 10, totalRxResets);
 #endif
 
       eth.stats.reset();

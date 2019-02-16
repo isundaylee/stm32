@@ -140,6 +140,8 @@ void Receiver::fsmActionRxReset() {
 
   parent_.resetRx();
 
+  parent_.stats.rxResets++;
+
   fsm_.pushEvent(FSMEvent::NOW_ACTIVE);
 }
 
