@@ -39,7 +39,15 @@ typedef void (*InterruptHandler)(void);
 
 #define E2I(e) (static_cast<uint32_t>(e))
 
+void handleAssertionFailure(char const* message);
+
 #define DEBUG_PRINT(...) printf(__VA_ARGS__)
+#define DEBUG_ASSERT(cond, message)                                            \
+  do {                                                                         \
+    if (!(cond)) {                                                             \
+      handleAssertionFailure(message);                                         \
+    }                                                                          \
+  } while (false)
 
 #if 1
 

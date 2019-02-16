@@ -67,6 +67,10 @@ uint8_t Core::readETHReg(ControlRegBank bank, ControlRegAddress addr) {
   parent_.spi_->transact(data, sizeof(data) / sizeof(data[0]));
   parent_.pinCS_.gpio->set(parent_.pinCS_.pin);
 
+  if (addr == ControlRegAddress::EIR) {
+    DEBUG_ASSERT((data[1] & 0b10110100) == 0, "Unexpected EIR value.");
+  }
+
   return static_cast<uint8_t>(data[1]);
 }
 
