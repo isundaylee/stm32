@@ -44,25 +44,7 @@ void ENC28J60::initializeMAC() {
 }
 
 void ENC28J60::initializeETH() {
-  core_.writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXSTL,
-                        lowByte(CONFIG_ERXST));
-  core_.writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXSTH,
-                        highByte(CONFIG_ERXST));
-  core_.writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXNDL,
-                        lowByte(CONFIG_ERXND));
-  core_.writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXNDH,
-                        highByte(CONFIG_ERXND));
-  core_.writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERDPTL,
-                        lowByte(CONFIG_ERXST));
-  core_.writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERDPTH,
-                        highByte(CONFIG_ERXST));
-  core_.writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXRDPTL,
-                        lowByte(CONFIG_ERXND));
-  core_.writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXRDPTH,
-                        highByte(CONFIG_ERXND));
 
-  core_.writeControlReg(ControlRegBank::BANK_1, ControlRegAddress::ERXFCON,
-                        0x00);
   WAIT_UNTIL(BIT_IS_SET(
       core_.readETHReg(ControlRegBank::BANK_0, ControlRegAddress::ESTAT),
       0b00000001));
@@ -98,10 +80,33 @@ void ENC28J60::enable(SPI* spi, GPIO::Pin pinCS, GPIO::Pin pinInt,
 }
 
 void ENC28J60::enableRx() {
+  core_.currentReadPointer_ = 0;
+
+  core_.writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXSTL,
+                        lowByte(CONFIG_ERXST));
+  core_.writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXSTH,
+                        highByte(CONFIG_ERXST));
+  core_.writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXNDL,
+                        lowByte(CONFIG_ERXND));
+  core_.writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXNDH,
+                        highByte(CONFIG_ERXND));
+  core_.writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERDPTL,
+                        lowByte(CONFIG_ERXST));
+  core_.writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERDPTH,
+                        highByte(CONFIG_ERXST));
+  core_.writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXRDPTL,
+                        lowByte(CONFIG_ERXND));
+  core_.writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERXRDPTH,
+                        highByte(CONFIG_ERXND));
+
+  core_.writeControlReg(ControlRegBank::BANK_1, ControlRegAddress::ERXFCON,
+                        0x00);
+
   core_.setETHRegBitField(ControlRegBank::BANK_0, ControlRegAddress::ECON1,
                           ECON1_RXEN);
   core_.setETHRegBitField(ControlRegBank::BANK_0, ControlRegAddress::EIE,
                           EIE_INTIE | EIE_PKTIE | EIE_RXERIE);
+
   pinInt_.gpio->enableExternalInterrupt(pinInt_.pin);
 }
 

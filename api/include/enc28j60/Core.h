@@ -15,6 +15,7 @@ class Core {
 private:
   ENC28J60& parent_;
 
+  uint16_t currentReadPointer_;
   ControlRegBank currentBank_ = ControlRegBank::BANK_DONT_CARE;
 
   Core(ENC28J60& parent) : parent_(parent) {}
@@ -36,7 +37,7 @@ private:
 
   void readBufferMemory(uint16_t* data, size_t len);
   void readBufferMemoryStart();
-  void readBufferMemoryEnd();
+  void readBufferMemoryEnd(size_t bytesRead);
   
   void writeBufferMemoryStart();
   void writeBufferMemoryEnd();

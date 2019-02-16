@@ -135,14 +135,17 @@ void Core::readBufferMemoryStart() {
   parent_.spi_->transact(header, sizeof(header) / sizeof(header[0]));
 }
 
-void Core::readBufferMemoryEnd() {
+void Core::readBufferMemoryEnd(size_t bytesRead) {
+  currentReadPointer_ += bytesRead;
+  currentReadPointer_ %= (CONFIG_ERXND + 1);
+
   parent_.pinCS_.gpio->set(parent_.pinCS_.pin);
 }
 
 void Core::readBufferMemory(uint16_t* data, size_t len) {
   readBufferMemoryStart();
   parent_.spi_->transact(data, len);
-  readBufferMemoryEnd();
+  readBufferMemoryEnd(len);
 }
 
 void Core::writeBufferMemoryStart() {

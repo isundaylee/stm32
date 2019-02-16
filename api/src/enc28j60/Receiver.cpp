@@ -94,7 +94,7 @@ void Receiver::fsmActionRxStartDMA() {
                                             ControlRegAddress::ERDPTH);
   uint16_t ERDPT = mergeBytes(ERDPTL, ERDPTH);
 
-  printf("\r\n0x%04x\r\n", ERDPT);
+  printf("\r\n0x%04x vs 0x%04x\r\n", ERDPT, parent_.core_.currentReadPointer_);
 
   parent_.core_.readBufferMemory(packetHeader, PACKET_HEADER_SIZE);
   frameLen = static_cast<size_t>(packetHeader[2]) +
@@ -134,7 +134,9 @@ void Receiver::fsmActionRxStartDMA() {
 }
 
 void Receiver::fsmActionRxCleanup() {
-  parent_.core_.readBufferMemoryEnd();
+  size_t bytesRead =
+      currentRxPacket_->frameLength + (currentRxPacket_->frameLength % 2);
+  parent_.core_.readBufferMemoryEnd(bytesRead);
   parent_.spi_->disableRxDMA();
   parent_.spi_->disableTxDMA();
 
