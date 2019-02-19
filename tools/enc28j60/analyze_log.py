@@ -11,7 +11,7 @@ def read_file(path):
     data = []
 
     with open(path) as f:
-        for line in f:
+        for line in list(f)[1:]:
             _, tss, byte = line.split(',')
             ts.append(float(tss))
             data.append(int(byte, 16))
@@ -31,23 +31,24 @@ rdp = None
 
 while i < n:
     if (i >= 4) and (mosi[i-5:i] == b"\xBF\x03\x9F\x01\x19"):
-        npp = struct.unpack('<H', miso[i+2:i+4])[0]
-        len = struct.unpack('<H', miso[i+4:i+6])[0]
+        npp = struct.unpack('<H', miso[i+10:i+12])[0]
+        len = struct.unpack('<H', miso[i+12:i+14])[0]
 
         if rdp is None:
             rdp = (0x1000 + npp - len - 6)
         else:
-            assert(rdp == last_npp)
+            # assert(rdp == last_npp)
+            pass
 
         rdp += 6
 
-        # print("PKTCNT: %d" % miso[i])
+        print("PKTCNT: %d" % miso[i])
         print("  Next Packet Pointer: 0x%04x" % npp)
-        # print("  Length             : 0x%04x (%d)" % (len, len))
-        # print("  Status             : 0x%02x 0x%02x" %
-        #       (miso[i + 6], miso[i + 7]))
+        print("  Length             : 0x%04x (%d)" % (len, len))
+        print("  Status             : 0x%02x 0x%02x" %
+              (miso[i + 14], miso[i + 15]))
 
-        i += 9
+        i += 17
         start = i
         while (i + 1 < n) and (ts[i + 1] - ts[i] <= 5e-6):
             i += 1
@@ -59,7 +60,7 @@ while i < n:
 
         actual_read = i - start + 1
 
-        assert(actual_read == len + (len % 2))
+        # assert(actual_read == len + (len % 2))
         last_npp = npp
 
         i += 1
@@ -70,12 +71,12 @@ while i < n:
         txsth = mosi[i - 7]
         wrptl = mosi[i - 5]
         wrpth = mosi[i - 3]
-        
+
         txst = txstl + (txsth << 8)
         wrpt = wrptl + (wrpth << 8)
-        
+
         assert((txst == 0x1000) and (wrpt == 0x1000))
-        
+
         while (i + 1 < n) and (ts[i + 1] - ts[i] <= 5e-6):
             i += 1
         i += 1
