@@ -41,6 +41,8 @@ typedef void (*InterruptHandler)(void);
 
 void setDebugPin0();
 void clearDebugPin0();
+void setDebugPin1();
+void clearDebugPin1();
 void handleAssertionFailure(char const* message);
 
 #define DEBUG_PRINT(...) printf(__VA_ARGS__)
@@ -58,6 +60,15 @@ void handleAssertionFailure(char const* message);
     clearDebugPin0();                                                          \
     DELAY(delay);                                                              \
     setDebugPin0();                                                            \
+  } while (false)
+
+#define DEBUG_PIN_1_SET setDebugPin1
+#define DEBUG_PIN_1_CLEAR clearDebugPin1
+#define DEBUG_PIN_1_PULSE_LOW(delay)                                           \
+  do {                                                                         \
+    clearDebugPin1();                                                          \
+    DELAY(delay);                                                              \
+    setDebugPin1();                                                            \
   } while (false)
 
 #if 1
