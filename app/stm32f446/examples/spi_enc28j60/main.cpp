@@ -108,7 +108,8 @@ static void initializeEthernet() {
 
   eth.enableRx();
 
-  Timer_2.enable(6000, 16000, handleTimerInterrupt);
+  Timer_2.enable(6000, Clock::getAPB1TimerFrequency() / 6000,
+                 handleTimerInterrupt);
 }
 
 uint16_t calculateChecksum(uint8_t const* data, size_t len) {
