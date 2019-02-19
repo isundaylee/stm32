@@ -105,7 +105,7 @@ void Receiver::fsmActionRxStartDMA() {
   }
 
   // Starts DMA transactions to read packet frame
-  size_t transactionSize = frameLen + (frameLen % 2);
+  currentRxDMATransactionSize_ = frameLen + (frameLen % 2);
 
   parent_.core_.readBufferMemoryStart();
   parent_.spi_->enableTxDMA();
@@ -119,15 +119,16 @@ void Receiver::fsmActionRxStartDMA() {
 
   parent_.dmaTx_.dma->configureStream(
       parent_.dmaTx_.stream, parent_.dmaTx_.channel,
-      DMA::Direction::MEM_TO_PERI, transactionSize, DMA::FIFOThreshold::DIRECT,
-      false, DMA::Priority::HIGH, rxDst, DMA::Size::BYTE, rxDstInc,
-      &parent_.spi_->getRaw()->DR, DMA::Size::BYTE, false, nullptr, nullptr);
+      DMA::Direction::MEM_TO_PERI, currentRxDMATransactionSize_,
+      DMA::FIFOThreshold::DIRECT, false, DMA::Priority::HIGH, rxDst,
+      DMA::Size::BYTE, rxDstInc, &parent_.spi_->getRaw()->DR, DMA::Size::BYTE,
+      false, nullptr, nullptr);
   parent_.dmaRx_.dma->configureStream(
       parent_.dmaRx_.stream, parent_.dmaRx_.channel,
-      DMA::Direction::PERI_TO_MEM, transactionSize, DMA::FIFOThreshold::DIRECT,
-      false, DMA::Priority::VERY_HIGH, &parent_.spi_->getRaw()->DR,
-      DMA::Size::BYTE, false, rxDst, DMA::Size::BYTE, rxDstInc,
-      handleRxDMAEventWrapper, this);
+      DMA::Direction::PERI_TO_MEM, currentRxDMATransactionSize_,
+      DMA::FIFOThreshold::DIRECT, false, DMA::Priority::VERY_HIGH,
+      &parent_.spi_->getRaw()->DR, DMA::Size::BYTE, false, rxDst,
+      DMA::Size::BYTE, rxDstInc, handleRxDMAEventWrapper, this);
 
   parent_.dmaTx_.dma->enableStream(parent_.dmaTx_.stream);
   parent_.dmaRx_.dma->enableStream(parent_.dmaRx_.stream);
@@ -146,9 +147,7 @@ void Receiver::fsmActionRxReset() {
 }
 
 void Receiver::fsmActionRxCleanup() {
-  size_t bytesRead =
-      currentRxPacket_->frameLength + (currentRxPacket_->frameLength % 2);
-  parent_.core_.readBufferMemoryEnd(bytesRead);
+  parent_.core_.readBufferMemoryEnd(currentRxDMATransactionSize_);
   parent_.spi_->disableRxDMA();
   parent_.spi_->disableTxDMA();
 
@@ -267,27 +266,27 @@ void Receiver::fsmActionDeactivate() {
 
 /* static */ Receiver::FSM::Transition Receiver::fsmTransitions_[] = {
     // clang-format off
-    
+
     // Activation
     {FSMState::IDLE,            FSMEvent::INTERRUPT,        &Receiver::fsmActionActivate,     FSMState::ACTIVE},
     {FSMState::IDLE,            FSMEvent::TX_REQUESTED,     &Receiver::fsmActionActivate,     FSMState::ACTIVE},
-    
+
     {FSMState::ACTIVE,          FSMEvent::NOW_ACTIVE,       &Receiver::fsmActionCheckEIR,     FSMState::ACTIVE},
-    
+
     // Rx path
     {FSMState::ACTIVE,          FSMEvent::RX_STARTED,       &Receiver::fsmActionRxStartDMA,   FSMState::RX_DMA_PENDING},
     {FSMState::RX_DMA_PENDING,  FSMEvent::RX_BAD_HEADER,    &Receiver::fsmActionRxReset,      FSMState::ACTIVE},
     {FSMState::RX_DMA_PENDING,  FSMEvent::RX_DMA_COMPLETE,  &Receiver::fsmActionRxCleanup,    FSMState::ACTIVE},
-    
+
     // Tx path
     {FSMState::ACTIVE,          FSMEvent::TX_STARTED,       &Receiver::fsmActionTxStartDMA,   FSMState::TX_DMA_PENDING},
     {FSMState::TX_DMA_PENDING,  FSMEvent::TX_DMA_COMPLETE,  &Receiver::fsmActionTxCleanup,    FSMState::TX_WAITING},
     {FSMState::TX_WAITING,      FSMEvent::TX_NOT_DONE_YET,  &Receiver::fsmActionTxWait,       FSMState::TX_WAITING},
     {FSMState::TX_WAITING,      FSMEvent::TX_DONE,          nullptr,                          FSMState::ACTIVE},
-    
+
     // Deactivation
     {FSMState::RX_DMA_PENDING,  FSMEvent::RX_ALL_DONE,      &Receiver::fsmActionDeactivate,   FSMState::IDLE},
-    
+
     FSM::TransitionTerminator,
     // clang-format on
 };

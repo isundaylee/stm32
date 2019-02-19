@@ -24,6 +24,7 @@ private:
   // Rx packet buffer
   Packet* currentTxPacket_ = nullptr;
   Packet* currentRxPacket_ = nullptr;
+  size_t currentRxDMATransactionSize_;
   uint8_t devNullFrame_;
   uint16_t devNullHeader_[PACKET_HEADER_SIZE];
 
@@ -64,7 +65,7 @@ private:
   FSM fsm_;
 
   void fsmActionActivate(void);
-  
+
   void fsmActionCheckEIR(void);
 
   void fsmActionRxStartDMA(void);
