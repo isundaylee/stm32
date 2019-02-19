@@ -2,6 +2,7 @@
 
 #include <printf.h>
 
+#include <ADC.h>
 #include <Clock.h>
 #include <DMA.h>
 #include <Flash.h>
@@ -354,6 +355,12 @@ extern "C" void main() {
   GPIO_C.setMode(9, GPIO::PinMode::INPUT);
 
   printf("Hello, SPI ENC28J60!\r\n");
+
+  // Check VCC level
+  ADC_1.enable();
+  ADC_1.selectChannel(17);
+  ADC::enableTempSensorAndVRefInt();
+  printf("VCC: %d\r\n", ADC_1.convert());
 
   initializeEthernet();
 

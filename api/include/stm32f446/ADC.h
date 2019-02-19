@@ -9,6 +9,8 @@ private:
 public:
   ADC(ADC_TypeDef* adc) : adc_(adc) {}
 
+  static void enableTempSensorAndVRefInt();
+
   void enable();
 
   void selectChannel(int channel);

@@ -1,6 +1,11 @@
 #include <ADC.h>
 #include <USART.h>
 
+/* static */ void ADC::enableTempSensorAndVRefInt() {
+  BIT_SET(ADC123_COMMON->CCR, ADC_CCR_TSVREFE);
+  DELAY(100);
+}
+
 void ADC::enable() {
   // Enables ADC clock
   if (adc_ == ADC1) {
