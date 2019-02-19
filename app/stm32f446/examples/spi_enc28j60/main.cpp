@@ -39,7 +39,7 @@ enum class State {
 
 enc28j60::ENC28J60 eth;
 
-static RingBuffer<Event, 16> events;
+static volatile RingBuffer<Event, 16> events;
 static auto state = State::IDLE;
 
 template <typename T> T min(T a, T b) { return (a < b ? a : b); }
