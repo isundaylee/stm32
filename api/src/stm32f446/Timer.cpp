@@ -4,8 +4,9 @@
 #define DEFINE_TIMER_ISR(n)                                                    \
   extern "C" void isrTimer##n() {                                              \
     (*Timer_##n.handler_)();                                                   \
-                                                                               \
     TIM##n->SR = ~TIM_SR_UIF;                                                  \
+    /* TODO: Fix other cases like this. */                                     \
+    FORCE_READ(TIM##n->SR);                                                    \
     NVIC_ClearPendingIRQ(TIM##n##_IRQn);                                       \
   }
 
