@@ -325,7 +325,7 @@ static void processEvents() {
 extern "C" void main() {
   Flash::setLatency(9);
   Clock::configureAPB1Prescaler(Clock::APBPrescaler::DIV_4);
-  Clock::configurePLL(8, 96);
+  Clock::configurePLL(8, 152);
   Clock::switchSysclk(Clock::SysclkSource::PLL);
 
   // Sets up USART 1
