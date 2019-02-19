@@ -52,6 +52,7 @@ void handleAssertionFailure(char const* message);
       handleAssertionFailure(message);                                         \
     }                                                                          \
   } while (false)
+#define DEBUG_FAIL(message) DEBUG_ASSERT(false, message)
 
 #define DEBUG_PIN_0_SET setDebugPin0
 #define DEBUG_PIN_0_CLEAR clearDebugPin0

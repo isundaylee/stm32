@@ -8,7 +8,7 @@ execute_process(
     OUTPUT_VARIABLE BINUTILS_PATH
     OUTPUT_STRIP_TRAILING_WHITESPACE
     )
-    
+
 get_filename_component(ARM_TOOLCHAIN_DIR ${BINUTILS_PATH} REALPATH)
 set(ARM_TOOLCHAIN_DIR ${ARM_TOOLCHAIN_DIR}/../..)
 get_filename_component(ARM_TOOLCHAIN_DIR ${ARM_TOOLCHAIN_DIR} ABSOLUTE)
@@ -33,7 +33,8 @@ set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 add_compile_options(
     -mthumb
     -mcpu=cortex-m4
-    -mfloat-abi=hard
+    -mfloat-abi=soft
+    -mfpu=fpv4-sp-d16
     -fno-exceptions
 
     -O3
@@ -44,7 +45,11 @@ add_compile_options(
     -Wold-style-cast
     -Werror
     )
-  
+
+link_directories(
+    ${ARM_TOOLCHAIN_DIR}/lib/gcc/arm-none-eabi/7.3.1/thumb/v7-m
+    )
+
 include_directories(SYSTEM
     ${ARM_TOOLCHAIN_DIR}/arm-none-eabi/include/c++/7.3.1
     ${ARM_TOOLCHAIN_DIR}/arm-none-eabi/include/c++/7.3.1/arm-none-eabi

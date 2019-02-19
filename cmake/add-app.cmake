@@ -25,7 +25,9 @@ function(add_app)
         ${ARG_SOURCES}
         )
 
-    target_link_libraries(${ARG_APP_NAME} ${ARG_DEVICE_NAME}Lib)
+    target_link_libraries(${ARG_APP_NAME}
+        -Wl,--whole-archive ${ARG_DEVICE_NAME}Lib -Wl,--no-whole-archive
+        )
 
     target_compile_options(${ARG_APP_NAME}
         PRIVATE
@@ -38,7 +40,6 @@ function(add_app)
             -T ${CMAKE_CURRENT_SOURCE_DIR}/../../../common/LinkerScript.lds
             -nostdlib
             -ffreestanding
-            -Wl,--whole-archive
         )
 
     add_custom_command(

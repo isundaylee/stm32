@@ -360,7 +360,12 @@ extern "C" void main() {
   ADC_1.enable();
   ADC_1.selectChannel(17);
   ADC::enableTempSensorAndVRefInt();
-  printf("VCC: %d\r\n", ADC_1.convert());
+  float vcc = 1.21 / ADC_1.convert() * (1 << 12);
+  printf("VCC: %f\r\n", vcc);
+
+  if (vcc < 3.3) {
+    DEBUG_FAIL("VCC too low!\r\n");
+  }
 
   initializeEthernet();
 

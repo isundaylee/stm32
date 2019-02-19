@@ -8,7 +8,7 @@ SECTIONS
 {
     .text :
     {
-        * (.isr_vectors)
+        KEEP(* (.isr_vectors))
         * (.text)
         * (.rodata)
     } > flash
