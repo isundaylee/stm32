@@ -130,6 +130,37 @@ void DMA::configureStream(int streamNumber, uint32_t channel, Direction dir,
   enableDMAInterrupt(dma_, streamNumber);
 }
 
+void DMA::reconfigureMemory(int streamNumber, uint32_t n, volatile void* addr,
+                            Size size, bool inc) {
+  auto stream = getStream(streamNumber);
+
+  stream->NDTR = n;
+  stream->M0AR = reinterpret_cast<uintptr_t>(addr);
+
+  FIELD_SET(stream->CR, DMA_SxCR_MSIZE, static_cast<uint32_t>(size));
+
+  if (inc) {
+    BIT_SET(stream->CR, DMA_SxCR_MINC);
+  } else {
+    BIT_CLEAR(stream->CR, DMA_SxCR_MINC);
+  }
+}
+void DMA::reconfigurePeripheral(int streamNumber, uint32_t n,
+                                volatile void* addr, Size size, bool inc) {
+  auto stream = getStream(streamNumber);
+
+  stream->NDTR = n;
+  stream->PAR = reinterpret_cast<uintptr_t>(addr);
+
+  FIELD_SET(stream->CR, DMA_SxCR_PSIZE, static_cast<uint32_t>(size));
+
+  if (inc) {
+    BIT_SET(stream->CR, DMA_SxCR_PINC);
+  } else {
+    BIT_CLEAR(stream->CR, DMA_SxCR_PINC);
+  }
+}
+
 void DMA::enableStream(int streamNumber) {
   DMA_Stream_TypeDef* stream = getStream(streamNumber);
 

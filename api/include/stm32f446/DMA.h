@@ -85,6 +85,10 @@ public:
                        bool srcInc, volatile void* dst, Size dstSize,
                        bool dstInc, StreamEventHandler eventHandler,
                        void* eventHandlerContext);
+  void reconfigureMemory(int streamNumber, uint32_t n, volatile void* addr,
+                         Size size, bool inc);
+  void reconfigurePeripheral(int streamNumber, uint32_t n, volatile void* addr,
+                             Size size, bool inc);
   void enableStream(int streamNumber);
 
   size_t getNumberOfData(int streamNumber);

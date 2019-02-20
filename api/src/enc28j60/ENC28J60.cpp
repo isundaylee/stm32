@@ -74,6 +74,8 @@ void ENC28J60::enable(SPI* spi, GPIO::Pin pinCS, GPIO::Pin pinInt,
                                        GPIO::TriggerDirection::FALLING_EDGE,
                                        handleInterruptWrapper, this);
 
+  receiver_.enable();
+
   initializeETH();
   initializeMAC();
   initializePHY();

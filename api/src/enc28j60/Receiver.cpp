@@ -13,38 +13,51 @@ static uint16_t mergeBytes(uint8_t low, uint8_t high) {
   return ((static_cast<uint16_t>(high) << 8) + low);
 }
 
+void Receiver::enable() {
+  parent_.dmaTx_.dma->configureStream(
+      parent_.dmaTx_.stream, parent_.dmaTx_.channel,
+      DMA::Direction::MEM_TO_PERI, 0, DMA::FIFOThreshold::DIRECT, false,
+      DMA::Priority::VERY_HIGH, nullptr, DMA::Size::BYTE, true,
+      &parent_.spi_->getRaw()->DR, DMA::Size::BYTE, false,
+      handleTxDMAEventWrapper, this);
+  parent_.dmaRx_.dma->configureStream(
+      parent_.dmaRx_.stream, parent_.dmaRx_.channel,
+      DMA::Direction::PERI_TO_MEM, 0, DMA::FIFOThreshold::DIRECT, false,
+      DMA::Priority::VERY_HIGH, &parent_.spi_->getRaw()->DR, DMA::Size::BYTE,
+      false, nullptr, DMA::Size::BYTE, true, nullptr, nullptr);
+}
+
 void Receiver::handleTxDMAEvent(DMA::StreamEvent event) {
-  switch (event.type) {
-  case DMA::StreamEventType::TRANSFER_COMPLETE:
-    fsm_.pushEvent(Receiver::FSM::Event::TX_DMA_COMPLETE);
-    break;
+  if (fsm_.state == FSMState::RX_DMA_PENDING) {
+    switch (event.type) {
+    case DMA::StreamEventType::TRANSFER_COMPLETE:
+      parent_.spi_->waitUntilNotBusy();
+      auto numberOfData =
+          parent_.dmaTx_.dma->getNumberOfData(parent_.dmaTx_.stream);
+      if (numberOfData == 0) {
+        currentRxDMASuccess_ = true;
+      } else {
+        currentRxDMASuccess_ = false;
+        DEBUG_ASSERT(BIT_IS_SET(parent_.spi_->getRaw()->SR, SPI_SR_OVR),
+                     "Rx DMA incomplete without SPI overrun.");
+      }
+      fsm_.pushEvent(Receiver::FSM::Event::RX_DMA_COMPLETE);
+      break;
+    }
+
+  } else if (fsm_.state == FSMState::TX_DMA_PENDING) {
+    switch (event.type) {
+    case DMA::StreamEventType::TRANSFER_COMPLETE:
+      fsm_.pushEvent(Receiver::FSM::Event::TX_DMA_COMPLETE);
+      break;
+    }
+  } else {
+    DEBUG_FAIL("DMA event received unexpectedly.");
   }
 }
 
 void handleTxDMAEventWrapper(DMA::StreamEvent event, void* context) {
   static_cast<Receiver*>(context)->handleTxDMAEvent(event);
-}
-
-void Receiver::handleRxDMAEvent(DMA::StreamEvent event) {
-  switch (event.type) {
-  case DMA::StreamEventType::TRANSFER_COMPLETE:
-    parent_.spi_->waitUntilNotBusy();
-    auto numberOfData =
-        parent_.dmaTx_.dma->getNumberOfData(parent_.dmaTx_.stream);
-    if (numberOfData == 0) {
-      currentRxDMASuccess_ = true;
-    } else {
-      currentRxDMASuccess_ = false;
-      DEBUG_ASSERT(BIT_IS_SET(parent_.spi_->getRaw()->SR, SPI_SR_OVR),
-                   "Rx DMA incomplete without SPI overrun.");
-    }
-    fsm_.pushEvent(Receiver::FSM::Event::RX_DMA_COMPLETE);
-    break;
-  }
-}
-
-void handleRxDMAEventWrapper(DMA::StreamEvent event, void* context) {
-  static_cast<Receiver*>(context)->handleRxDMAEvent(event);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -130,25 +143,17 @@ void Receiver::fsmActionRxStartDMA() {
   parent_.core_.readBufferMemoryStart();
   parent_.spi_->enableTxDMA();
   parent_.spi_->enableRxDMA();
-  parent_.dmaTx_.dma->enable();
-  parent_.dmaRx_.dma->enable();
 
   uint8_t* rxDst =
       (!!currentRxPacket_ ? currentRxPacket_->frame : &devNullFrame_);
   bool rxDstInc = (!!currentRxPacket_ ? true : false);
 
-  parent_.dmaTx_.dma->configureStream(
-      parent_.dmaTx_.stream, parent_.dmaTx_.channel,
-      DMA::Direction::MEM_TO_PERI, currentRxDMATransactionSize_,
-      DMA::FIFOThreshold::DIRECT, false, DMA::Priority::HIGH, rxDst,
-      DMA::Size::BYTE, rxDstInc, &parent_.spi_->getRaw()->DR, DMA::Size::BYTE,
-      false, handleRxDMAEventWrapper, this);
-  parent_.dmaRx_.dma->configureStream(
-      parent_.dmaRx_.stream, parent_.dmaRx_.channel,
-      DMA::Direction::PERI_TO_MEM, currentRxDMATransactionSize_,
-      DMA::FIFOThreshold::DIRECT, false, DMA::Priority::VERY_HIGH,
-      &parent_.spi_->getRaw()->DR, DMA::Size::BYTE, false, rxDst,
-      DMA::Size::BYTE, rxDstInc, nullptr, nullptr);
+  parent_.dmaTx_.dma->reconfigureMemory(parent_.dmaTx_.stream,
+                                        currentRxDMATransactionSize_, rxDst,
+                                        DMA::Size::BYTE, rxDstInc);
+  parent_.dmaRx_.dma->reconfigureMemory(parent_.dmaRx_.stream,
+                                        currentRxDMATransactionSize_, rxDst,
+                                        DMA::Size::BYTE, rxDstInc);
 
   parent_.dmaTx_.dma->enableStream(parent_.dmaTx_.stream);
   parent_.dmaRx_.dma->enableStream(parent_.dmaRx_.stream);
@@ -229,22 +234,13 @@ void Receiver::fsmActionTxStartDMA(void) {
 
   parent_.spi_->enableTxDMA();
   parent_.spi_->enableRxDMA();
-  parent_.dmaTx_.dma->enable();
-  parent_.dmaRx_.dma->enable();
 
-  parent_.dmaTx_.dma->configureStream(
-      parent_.dmaTx_.stream, parent_.dmaTx_.channel,
-      DMA::Direction::MEM_TO_PERI, currentTxPacket_->frameLength,
-      DMA::FIFOThreshold::DIRECT, false, DMA::Priority::VERY_HIGH,
-      currentTxPacket_->frame, DMA::Size::BYTE, true,
-      &parent_.spi_->getRaw()->DR, DMA::Size::BYTE, false,
-      handleTxDMAEventWrapper, this);
-  parent_.dmaRx_.dma->configureStream(
-      parent_.dmaRx_.stream, parent_.dmaRx_.channel,
-      DMA::Direction::PERI_TO_MEM, currentTxPacket_->frameLength,
-      DMA::FIFOThreshold::DIRECT, false, DMA::Priority::VERY_HIGH,
-      &parent_.spi_->getRaw()->DR, DMA::Size::BYTE, false,
-      currentTxPacket_->frame, DMA::Size::BYTE, true, nullptr, nullptr);
+  parent_.dmaTx_.dma->reconfigureMemory(
+      parent_.dmaTx_.stream, currentTxPacket_->frameLength,
+      currentTxPacket_->frame, DMA::Size::BYTE, true);
+  parent_.dmaRx_.dma->reconfigureMemory(
+      parent_.dmaRx_.stream, currentTxPacket_->frameLength,
+      currentTxPacket_->frame, DMA::Size::BYTE, true);
 
   parent_.dmaTx_.dma->enableStream(parent_.dmaTx_.stream);
   parent_.dmaRx_.dma->enableStream(parent_.dmaRx_.stream);

@@ -326,7 +326,7 @@ static void processEvents() {
 ////////////////////////////////////////////////////////////////////////////////
 
 extern "C" void main() {
-  Flash::setLatency(9);
+  Flash::setLatency(8);
   Clock::configureAPB1Prescaler(Clock::APBPrescaler::DIV_4);
   Clock::configurePLL(8, 128);
   Clock::switchSysclk(Clock::SysclkSource::PLL);
@@ -349,6 +349,8 @@ extern "C" void main() {
                         SPI::DataFrameFormat::BYTE, SPI::BaudRate::PCLK_OVER_2,
                         SPI::NSSMode::MANUAL);
   SPI_2.enable();
+
+  DMA_1.enable();
 
   GPIO_C.enable();
   GPIO_C.setMode(7, GPIO::PinMode::OUTPUT);

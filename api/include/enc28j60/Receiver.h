@@ -30,9 +30,7 @@ private:
   uint16_t devNullHeader_[PACKET_HEADER_SIZE];
 
   void handleTxDMAEvent(DMA::StreamEvent event);
-  void handleRxDMAEvent(DMA::StreamEvent event);
   friend void handleTxDMAEventWrapper(DMA::StreamEvent event, void* context);
-  friend void handleRxDMAEventWrapper(DMA::StreamEvent event, void* context);
 
   // State machine
   enum class FSMEvent {
@@ -79,6 +77,8 @@ private:
 
   Receiver(ENC28J60& parent)
       : parent_(parent), fsm_(FSM::State::IDLE, *this, fsmTransitions_) {}
+
+  void enable();
 
   friend class ENC28J60;
 };
