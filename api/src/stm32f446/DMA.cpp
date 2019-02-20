@@ -136,6 +136,10 @@ void DMA::enableStream(int streamNumber) {
   BIT_SET(stream->CR, DMA_SxCR_EN);
 }
 
+size_t DMA::getNumberOfData(int streamNumber) {
+  return getStream(streamNumber)->NDTR;
+}
+
 static bool isTCIFSet(DMA_TypeDef* dma, int streamNumber) {
   uint32_t offsets[] = {0, 6, 16, 22};
 

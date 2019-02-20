@@ -300,15 +300,18 @@ static void processEvents() {
 
     case Event::TIMER_INTERRUPT: {
       static size_t totalRxResets = 0;
+      static size_t totalRxPacketsFailed = 0;
 
 #if DUMP_STATS
       totalRxResets += eth.stats.rxResets;
+      totalRxPacketsFailed += eth.stats.rxPacketsFailed;
 
-      printf("RxBytes = %8d, RxPackets = %5d, RxPacketsLostInDriver = %5d, "
-             "MaxPKTCNT = %3d, RxKbps = %5d, RxResets = %3d\r\n",
-             eth.stats.rxBytes, eth.stats.rxPackets,
+      printf("Rx = %5d / %7d B / %5d Kbps / TF %2d / L %5d, MaxPKTCNT = %3d, "
+             "RxResets = %3d\r\n",
+             eth.stats.rxPackets, eth.stats.rxBytes,
+             (eth.stats.rxBytes * 8) >> 10, totalRxPacketsFailed,
              eth.stats.rxPacketsLostInDriver, eth.stats.maxPKTCNT,
-             (eth.stats.rxBytes * 8) >> 10, totalRxResets);
+             totalRxResets);
 #endif
 
       eth.stats.reset();

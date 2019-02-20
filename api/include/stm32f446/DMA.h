@@ -87,6 +87,8 @@ public:
                        void* eventHandlerContext);
   void enableStream(int streamNumber);
 
+  size_t getNumberOfData(int streamNumber);
+
   friend void isrDMA1Stream0();
   friend void isrDMA1Stream1();
   friend void isrDMA1Stream2();

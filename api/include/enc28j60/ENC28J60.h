@@ -28,6 +28,7 @@ using EventHandler = void (*)(Event event, void* context);
 struct Stats {
   size_t rxPackets = 0;
   size_t rxBytes = 0;
+  size_t rxPacketsFailed = 0;
   size_t rxPacketsLostInDriver = 0;
   size_t rxResets = 0;
 
@@ -36,6 +37,7 @@ struct Stats {
   void reset() {
     rxPackets = 0;
     rxBytes = 0;
+    rxPacketsFailed = 0;
     rxPacketsLostInDriver = 0;
     rxResets = 0;
     maxPKTCNT = 0;

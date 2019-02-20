@@ -28,6 +28,16 @@ void handleTxDMAEventWrapper(DMA::StreamEvent event, void* context) {
 void Receiver::handleRxDMAEvent(DMA::StreamEvent event) {
   switch (event.type) {
   case DMA::StreamEventType::TRANSFER_COMPLETE:
+    parent_.spi_->waitUntilNotBusy();
+    auto numberOfData =
+        parent_.dmaTx_.dma->getNumberOfData(parent_.dmaTx_.stream);
+    if (numberOfData == 0) {
+      currentRxDMASuccess_ = true;
+    } else {
+      currentRxDMASuccess_ = false;
+      DEBUG_ASSERT(BIT_IS_SET(parent_.spi_->getRaw()->SR, SPI_SR_OVR),
+                   "Rx DMA incomplete without SPI overrun.");
+    }
     fsm_.pushEvent(Receiver::FSM::Event::RX_DMA_COMPLETE);
     break;
   }
@@ -132,13 +142,13 @@ void Receiver::fsmActionRxStartDMA() {
       DMA::Direction::MEM_TO_PERI, currentRxDMATransactionSize_,
       DMA::FIFOThreshold::DIRECT, false, DMA::Priority::HIGH, rxDst,
       DMA::Size::BYTE, rxDstInc, &parent_.spi_->getRaw()->DR, DMA::Size::BYTE,
-      false, nullptr, nullptr);
+      false, handleRxDMAEventWrapper, this);
   parent_.dmaRx_.dma->configureStream(
       parent_.dmaRx_.stream, parent_.dmaRx_.channel,
       DMA::Direction::PERI_TO_MEM, currentRxDMATransactionSize_,
       DMA::FIFOThreshold::DIRECT, false, DMA::Priority::VERY_HIGH,
       &parent_.spi_->getRaw()->DR, DMA::Size::BYTE, false, rxDst,
-      DMA::Size::BYTE, rxDstInc, handleRxDMAEventWrapper, this);
+      DMA::Size::BYTE, rxDstInc, nullptr, nullptr);
 
   parent_.dmaTx_.dma->enableStream(parent_.dmaTx_.stream);
   parent_.dmaRx_.dma->enableStream(parent_.dmaRx_.stream);
@@ -177,10 +187,14 @@ void Receiver::fsmActionRxCleanup() {
                                   ControlRegAddress::ECON2, ECON2_PKTDEC);
 
   if (!!currentRxPacket_) {
-    parent_.rxBuffer.push(currentRxPacket_);
+    if (currentRxDMASuccess_) {
+      parent_.rxBuffer.push(currentRxPacket_);
 
-    parent_.stats.rxBytes += currentRxPacket_->frameLength;
-    parent_.stats.rxPackets++;
+      parent_.stats.rxBytes += currentRxPacket_->frameLength;
+      parent_.stats.rxPackets++;
+    } else {
+      parent_.stats.rxPacketsFailed++;
+    }
   } else {
     parent_.stats.rxPacketsLostInDriver++;
   }
