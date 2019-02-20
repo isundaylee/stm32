@@ -47,8 +47,6 @@ private:
 
     TX_STARTED,
     TX_DMA_COMPLETE,
-    TX_NOT_DONE_YET,
-    TX_DONE,
   };
 
   enum class FSMState {
@@ -58,7 +56,6 @@ private:
     RX_DMA_PENDING,
 
     TX_DMA_PENDING,
-    TX_WAITING,
   };
 
   using FSM = EmbeddedFSM<Receiver, FSMState, FSMEvent, false>;
@@ -74,7 +71,6 @@ private:
 
   void fsmActionTxStartDMA(void);
   void fsmActionTxCleanup(void);
-  void fsmActionTxWait(void);
 
   void fsmActionDeactivate(void);
 

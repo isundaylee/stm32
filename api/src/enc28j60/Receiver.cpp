@@ -59,7 +59,17 @@ void Receiver::fsmActionCheckEIR() {
                                       ControlRegAddress::EIR, EIR_RXERIF);
   }
 
-  if (!parent_.txBuffer.empty()) {
+  if (BIT_IS_SET(eir, EIR_TXIF)) {
+    DEBUG_ASSERT(!!currentTxPacket_, "TXIF set but we're not in Tx.");
+
+    parent_.core_.clearETHRegBitField(ControlRegBank::BANK_DONT_CARE,
+                                      ControlRegAddress::EIR, EIR_TXIF);
+    parent_.packetBuffer_.free(currentTxPacket_);
+    currentTxPacket_ = nullptr;
+    parent_.postEvent(Event::TX_DONE);
+  }
+
+  if (!currentTxPacket_ && !parent_.txBuffer.empty()) {
     // We prioritize Tx over Rx.
     fsm_.pushEvent(FSMEvent::TX_STARTED);
   } else {
@@ -239,25 +249,7 @@ void Receiver::fsmActionTxCleanup(void) {
   parent_.core_.setETHRegBitField(ControlRegBank::BANK_DONT_CARE,
                                   ControlRegAddress::ECON1, ECON1_TXRTS);
 
-  parent_.packetBuffer_.free(currentTxPacket_);
-
-  fsm_.pushEvent(FSMEvent::TX_NOT_DONE_YET);
-}
-
-void Receiver::fsmActionTxWait(void) {
-  uint8_t EIR = parent_.core_.readETHReg(ControlRegBank::BANK_DONT_CARE,
-                                         ControlRegAddress::EIR);
-
-  if (BIT_IS_SET(EIR, EIR_TXIF)) {
-    parent_.core_.clearETHRegBitField(ControlRegBank::BANK_DONT_CARE,
-                                      ControlRegAddress::EIR, EIR_TXIF);
-
-    parent_.postEvent(Event::TX_DONE);
-    fsm_.pushEvent(FSMEvent::TX_DONE);
-    fsm_.pushEvent(FSMEvent::NOW_ACTIVE);
-  } else {
-    fsm_.pushEvent(FSMEvent::TX_NOT_DONE_YET);
-  }
+  fsm_.pushEvent(FSMEvent::NOW_ACTIVE);
 }
 
 void Receiver::fsmActionDeactivate() {
@@ -280,9 +272,7 @@ void Receiver::fsmActionDeactivate() {
 
     // Tx path
     {FSMState::ACTIVE,          FSMEvent::TX_STARTED,       &Receiver::fsmActionTxStartDMA,   FSMState::TX_DMA_PENDING},
-    {FSMState::TX_DMA_PENDING,  FSMEvent::TX_DMA_COMPLETE,  &Receiver::fsmActionTxCleanup,    FSMState::TX_WAITING},
-    {FSMState::TX_WAITING,      FSMEvent::TX_NOT_DONE_YET,  &Receiver::fsmActionTxWait,       FSMState::TX_WAITING},
-    {FSMState::TX_WAITING,      FSMEvent::TX_DONE,          nullptr,                          FSMState::ACTIVE},
+    {FSMState::TX_DMA_PENDING,  FSMEvent::TX_DMA_COMPLETE,  &Receiver::fsmActionTxCleanup,    FSMState::ACTIVE},
 
     // Deactivation
     {FSMState::RX_DMA_PENDING,  FSMEvent::RX_ALL_DONE,      &Receiver::fsmActionDeactivate,   FSMState::IDLE},
