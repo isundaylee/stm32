@@ -129,7 +129,6 @@ void Receiver::fsmActionRxStartDMA() {
   currentRxDMATransactionSize_ = frameLen + (frameLen % 2);
 
   parent_.core_.readBufferMemoryStart();
-  parent_.spi_->enableTxDMA();
   parent_.spi_->enableRxDMA();
 
   uint8_t* rxDst =
@@ -145,6 +144,8 @@ void Receiver::fsmActionRxStartDMA() {
 
   parent_.dmaTx_.dma->enableStream(parent_.dmaTx_.stream);
   parent_.dmaRx_.dma->enableStream(parent_.dmaRx_.stream);
+
+  parent_.spi_->enableTxDMA();
 }
 
 void Receiver::fsmActionRxReset() {
@@ -236,7 +237,6 @@ void Receiver::fsmActionTxStartDMA(void) {
   parent_.core_.writeBufferMemoryStart();
   parent_.spi_->transact(&controlByte, 1);
 
-  parent_.spi_->enableTxDMA();
   parent_.spi_->enableRxDMA();
 
   parent_.dmaTx_.dma->reconfigureMemory(
@@ -248,6 +248,8 @@ void Receiver::fsmActionTxStartDMA(void) {
 
   parent_.dmaTx_.dma->enableStream(parent_.dmaTx_.stream);
   parent_.dmaRx_.dma->enableStream(parent_.dmaRx_.stream);
+
+  parent_.spi_->enableTxDMA();
 }
 
 void Receiver::fsmActionTxCleanup(void) {
