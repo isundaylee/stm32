@@ -6,6 +6,8 @@ class SPI {
 private:
   SPI_TypeDef* spi_;
 
+  void checkFlagsAtTransactionStart();
+
 public:
   enum class ClockPolarity {
     IDLE_LOW = 0b0,

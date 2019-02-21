@@ -44,7 +44,6 @@ void Receiver::handleTxDMAEvent(DMA::StreamEvent event) {
       fsm_.pushEvent(Receiver::FSM::Event::RX_DMA_COMPLETE);
       break;
     }
-
   } else if (fsm_.state == FSMState::TX_DMA_PENDING) {
     switch (event.type) {
     case DMA::StreamEventType::TRANSFER_COMPLETE:
@@ -103,7 +102,6 @@ void Receiver::fsmActionCheckEIR() {
 void Receiver::fsmActionRxStartDMA() {
   uint8_t packetCount = parent_.core_.readETHReg(ControlRegBank::BANK_1,
                                                  ControlRegAddress::EPKTCNT);
-
   if (packetCount == 0) {
     fsm_.pushEvent(FSMEvent::RX_ALL_DONE);
     return;
@@ -248,6 +246,21 @@ void Receiver::fsmActionTxStartDMA(void) {
 
 void Receiver::fsmActionTxCleanup(void) {
   parent_.core_.writeBufferMemoryEnd();
+
+  parent_.spi_->waitUntilNotBusy();
+  auto numberOfData =
+      parent_.dmaRx_.dma->getNumberOfData(parent_.dmaRx_.stream);
+  if (numberOfData != 0) {
+    parent_.stats.txPacketsFailed++;
+
+    parent_.dmaRx_.dma->disableStream(parent_.dmaRx_.stream);
+
+    // If current DMA is unsuccessful, we need to clear out set flags.
+    FORCE_READ(parent_.spi_->getRaw()->DR);
+  }
+
+  parent_.spi_->disableRxDMA();
+  parent_.spi_->disableTxDMA();
 
   uint16_t ETXND = CONFIG_ETXST + currentTxPacket_->frameLength;
 

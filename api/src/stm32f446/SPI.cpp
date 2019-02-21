@@ -70,7 +70,17 @@ bool SPI::transmit(uint16_t const* data, size_t len) {
   return true;
 }
 
+void SPI::checkFlagsAtTransactionStart() {
+  DEBUG_ASSERT(BIT_IS_SET(spi_->SR, SPI_SR_TXE), "TXE should be set here.");
+  DEBUG_ASSERT(BIT_IS_CLEAR(spi_->SR, SPI_SR_RXNE),
+               "RXNE should not be set here.");
+  DEBUG_ASSERT(BIT_IS_CLEAR(spi_->SR, SPI_SR_OVR),
+               "OVR should not be set here.");
+}
+
 bool SPI::transact(uint16_t* data, size_t len) {
+  checkFlagsAtTransactionStart();
+
   for (size_t i = 0; i < len; i++) {
     WAIT_UNTIL(BIT_IS_SET(spi_->SR, SPI_SR_TXE));
     spi_->DR = data[i];
@@ -83,7 +93,10 @@ bool SPI::transact(uint16_t* data, size_t len) {
   return true;
 }
 
-void SPI::enableTxDMA() { BIT_SET(spi_->CR2, SPI_CR2_TXDMAEN); }
+void SPI::enableTxDMA() {
+  checkFlagsAtTransactionStart();
+  BIT_SET(spi_->CR2, SPI_CR2_TXDMAEN);
+}
 void SPI::disableTxDMA() { BIT_CLEAR(spi_->CR2, SPI_CR2_TXDMAEN); }
 void SPI::enableRxDMA() { BIT_SET(spi_->CR2, SPI_CR2_RXDMAEN); }
 void SPI::disableRxDMA() { BIT_CLEAR(spi_->CR2, SPI_CR2_RXDMAEN); }

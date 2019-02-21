@@ -32,6 +32,8 @@ struct Stats {
   size_t rxPacketsLostInDriver = 0;
   size_t rxResets = 0;
 
+  size_t txPacketsFailed = 0;
+
   uint8_t maxPKTCNT = 0;
 
   void reset() {
@@ -40,6 +42,9 @@ struct Stats {
     rxPacketsFailed = 0;
     rxPacketsLostInDriver = 0;
     rxResets = 0;
+
+    txPacketsFailed = 0;
+    
     maxPKTCNT = 0;
   }
 };

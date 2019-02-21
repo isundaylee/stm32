@@ -109,7 +109,7 @@ static void initializeEthernet() {
 
   eth.enableRx();
 
-  Timer_2.enable(6000, Clock::getAPB1TimerFrequency() / 6000,
+  Timer_2.enable(6000, Clock::getAPB1TimerFrequency() / 6000 / 30,
                  handleTimerInterrupt);
 }
 
@@ -301,17 +301,20 @@ static void processEvents() {
     case Event::TIMER_INTERRUPT: {
       static size_t totalRxResets = 0;
       static size_t totalRxPacketsFailed = 0;
+      static size_t totalTxPacketsFailed = 0;
 
 #if DUMP_STATS
       totalRxResets += eth.stats.rxResets;
       totalRxPacketsFailed += eth.stats.rxPacketsFailed;
+      totalTxPacketsFailed += eth.stats.txPacketsFailed;
 
-      printf("Rx = %5d / %7d B / %5d Kbps / TF %2d / L %5d, MaxPKTCNT = %3d, "
+      printf("Rx = %5d / %7d B / %5d Kbps / TF %2d / L %5d, Tx = TF %2d, "
+             "MaxPKTCNT = %3d, "
              "RxResets = %3d\r\n",
              eth.stats.rxPackets, eth.stats.rxBytes,
              (eth.stats.rxBytes * 8) >> 10, totalRxPacketsFailed,
-             eth.stats.rxPacketsLostInDriver, eth.stats.maxPKTCNT,
-             totalRxResets);
+             eth.stats.rxPacketsLostInDriver, totalTxPacketsFailed,
+             eth.stats.maxPKTCNT, totalRxResets);
 #endif
 
       eth.stats.reset();

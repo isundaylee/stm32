@@ -167,6 +167,12 @@ void DMA::enableStream(int streamNumber) {
   BIT_SET(stream->CR, DMA_SxCR_EN);
 }
 
+void DMA::disableStream(int streamNumber) {
+  DMA_Stream_TypeDef* stream = getStream(streamNumber);
+
+  BIT_CLEAR(stream->CR, DMA_SxCR_EN);
+}
+
 size_t DMA::getNumberOfData(int streamNumber) {
   return getStream(streamNumber)->NDTR;
 }

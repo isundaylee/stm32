@@ -90,6 +90,7 @@ public:
   void reconfigurePeripheral(int streamNumber, uint32_t n, volatile void* addr,
                              Size size, bool inc);
   void enableStream(int streamNumber);
+  void disableStream(int streamNumber);
 
   size_t getNumberOfData(int streamNumber);
 
