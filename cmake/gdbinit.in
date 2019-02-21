@@ -1,3 +1,53 @@
 target remote localhost:2331
 file ${ARG_APP_NAME}
 layout src
+
+focus cmd
+
+define pdma1
+  set $i = 0
+
+  while $i < 8
+    if $i == 0
+      set $sr = (*(uint32_t *)0x40026000 >> 0) & 0xFF
+    end
+    if $i == 1
+      set $sr = (*(uint32_t *)0x40026000 >> 6) & 0xFF
+    end
+    if $i == 2
+      set $sr = (*(uint32_t *)0x40026000 >> 16) & 0xFF
+    end
+    if $i == 3
+      set $sr = (*(uint32_t *)0x40026000 >> 22) & 0xFF
+    end
+    if $i == 4
+      set $sr = (*(uint32_t *)0x40026004 >> 0) & 0xFF
+    end
+    if $i == 5
+      set $sr = (*(uint32_t *)0x40026004 >> 6) & 0xFF
+    end
+    if $i == 6
+      set $sr = (*(uint32_t *)0x40026004 >> 16) & 0xFF
+    end
+    if $i == 7
+      set $sr = (*(uint32_t *)0x40026004 >> 22) & 0xFF
+    end
+
+    printf "DMA1_S%d:   P 0x%08x M0 0x%08x M1 0x%08x, %d left, CR 0x%08x, SR 0x%02x\n", \
+      $i, \
+      *(uint32_t *)(0x40026018 + 0x18 * $i), \
+      *(uint32_t *)(0x4002601C + 0x18 * $i), \
+      *(uint32_t *)(0x40026020 + 0x18 * $i), \
+      *(uint32_t *)(0x40026014 + 0x18 * $i), \
+      *(uint32_t *)(0x40026010 + 0x18 * $i), \
+      $sr
+
+    set $i = $i + 1
+  end
+end
+
+define pspi2
+  printf "SPI2_CR1: 0x%08x\n", *(uint32_t *)0x40003800
+  printf "SPI2_CR2: 0x%08x\n", *(uint32_t *)0x40003804
+  printf "SPI2_SR:  0x%08x\n", *(uint32_t *)0x40003808
+end
