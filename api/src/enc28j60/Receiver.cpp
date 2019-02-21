@@ -31,16 +31,6 @@ void Receiver::handleTxDMAEvent(DMA::StreamEvent event) {
   if (fsm_.state == FSMState::RX_DMA_PENDING) {
     switch (event.type) {
     case DMA::StreamEventType::TRANSFER_COMPLETE:
-      parent_.spi_->waitUntilNotBusy();
-      auto numberOfData =
-          parent_.dmaTx_.dma->getNumberOfData(parent_.dmaTx_.stream);
-      if (numberOfData == 0) {
-        currentRxDMASuccess_ = true;
-      } else {
-        currentRxDMASuccess_ = false;
-        DEBUG_ASSERT(BIT_IS_SET(parent_.spi_->getRaw()->SR, SPI_SR_OVR),
-                     "Rx DMA incomplete without SPI overrun.");
-      }
       fsm_.pushEvent(Receiver::FSM::Event::RX_DMA_COMPLETE);
       break;
     }
@@ -171,6 +161,22 @@ void Receiver::fsmActionRxReset() {
 
 void Receiver::fsmActionRxCleanup() {
   parent_.core_.readBufferMemoryEnd(currentRxDMATransactionSize_);
+
+  parent_.spi_->waitUntilNotBusy();
+  auto numberOfData =
+      parent_.dmaRx_.dma->getNumberOfData(parent_.dmaRx_.stream);
+  auto success = true;
+  if (numberOfData != 0) {
+    DEBUG_ASSERT(BIT_IS_SET(parent_.spi_->getRaw()->SR, SPI_SR_OVR),
+                 "Rx DMA incomplete without SPI overrun.");
+
+    success = false;
+
+    parent_.dmaRx_.dma->disableStream(parent_.dmaRx_.stream);
+    FORCE_READ(parent_.spi_->getRaw()->DR);
+    FORCE_READ(parent_.spi_->getRaw()->SR);
+  }
+
   parent_.spi_->disableRxDMA();
   parent_.spi_->disableTxDMA();
 
@@ -190,7 +196,7 @@ void Receiver::fsmActionRxCleanup() {
                                   ControlRegAddress::ECON2, ECON2_PKTDEC);
 
   if (!!currentRxPacket_) {
-    if (currentRxDMASuccess_) {
+    if (success) {
       parent_.rxBuffer.push(currentRxPacket_);
 
       parent_.stats.rxBytes += currentRxPacket_->frameLength;
