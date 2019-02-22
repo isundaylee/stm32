@@ -36,8 +36,6 @@ private:
     INTERRUPT,
     TX_REQUESTED,
 
-    NOW_ACTIVE,
-
     RX_STARTED,
     RX_BAD_HEADER,
     RX_DMA_COMPLETE,
@@ -73,9 +71,11 @@ private:
   void fsmActionDeactivate(void);
 
   static FSM::Transition fsmTransitions_[];
+  static FSM::StateAction fsmStateActions_[];
 
   Receiver(ENC28J60& parent)
-      : parent_(parent), fsm_(FSM::State::IDLE, *this, fsmTransitions_) {}
+      : parent_(parent),
+        fsm_(FSM::State::IDLE, *this, fsmTransitions_, fsmStateActions_) {}
 
   void enable();
 

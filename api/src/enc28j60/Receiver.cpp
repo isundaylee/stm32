@@ -57,8 +57,6 @@ void Receiver::fsmActionActivate() {
   // We handle interrupt one at a time.
   // Inspiration taken from the Linux kernel driver.
   parent_.pinInt_.gpio->disableExternalInterrupt(parent_.pinInt_.pin);
-
-  fsm_.pushEvent(FSMEvent::NOW_ACTIVE);
 }
 
 void Receiver::fsmActionCheckEIR() {
@@ -156,8 +154,6 @@ void Receiver::fsmActionRxReset() {
   parent_.resetRx();
 
   parent_.stats.rxResets++;
-
-  fsm_.pushEvent(FSMEvent::NOW_ACTIVE);
 }
 
 void Receiver::fsmActionRxCleanup() {
@@ -213,8 +209,6 @@ void Receiver::fsmActionRxCleanup() {
                                          : Event::RX_OVERFLOW);
 
   currentRxPacket_ = nullptr;
-
-  fsm_.pushEvent(FSMEvent::NOW_ACTIVE);
 }
 
 void Receiver::fsmActionTxStartDMA(void) {
@@ -279,8 +273,6 @@ void Receiver::fsmActionTxCleanup(void) {
 
   parent_.core_.setETHRegBitField(ControlRegBank::BANK_DONT_CARE,
                                   ControlRegAddress::ECON1, ECON1_TXRTS);
-
-  fsm_.pushEvent(FSMEvent::NOW_ACTIVE);
 }
 
 void Receiver::fsmActionDeactivate() {
@@ -293,8 +285,6 @@ void Receiver::fsmActionDeactivate() {
     // Activation
     {FSMState::IDLE,            FSMEvent::INTERRUPT,        &Receiver::fsmActionActivate,     FSMState::ACTIVE},
     {FSMState::IDLE,            FSMEvent::TX_REQUESTED,     &Receiver::fsmActionActivate,     FSMState::ACTIVE},
-
-    {FSMState::ACTIVE,          FSMEvent::NOW_ACTIVE,       &Receiver::fsmActionCheckEIR,     FSMState::ACTIVE},
 
     // Rx path
     {FSMState::ACTIVE,          FSMEvent::RX_STARTED,       &Receiver::fsmActionRxStartDMA,   FSMState::RX_DMA_PENDING},
@@ -311,4 +301,13 @@ void Receiver::fsmActionDeactivate() {
     FSM::TransitionTerminator,
     // clang-format on
 };
+
+/* static */ Receiver::FSM::StateAction Receiver::fsmStateActions_[] = {
+    // clang-format off
+    {FSMState::ACTIVE, &Receiver::fsmActionCheckEIR},
+
+    FSM::StateActionTerminator,
+    // clang-format on
+};
+
 }; // namespace enc28j60
