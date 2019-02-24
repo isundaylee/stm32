@@ -56,7 +56,8 @@ void handleTxDMAEventWrapper(DMA::StreamEvent event, void* context) {
 void Receiver::fsmActionActivate() {
   // We handle interrupt one at a time.
   // Inspiration taken from the Linux kernel driver.
-  parent_.pinInt_.gpio->disableExternalInterrupt(parent_.pinInt_.pin);
+  parent_.core_.clearETHRegBitField(ControlRegBank::BANK_DONT_CARE,
+                                    ControlRegAddress::EIE, EIE_INTIE);
 }
 
 void Receiver::fsmActionCheckEIR() {
@@ -276,7 +277,8 @@ void Receiver::fsmActionTxCleanup(void) {
 }
 
 void Receiver::fsmActionDeactivate() {
-  parent_.pinInt_.gpio->enableExternalInterrupt(parent_.pinInt_.pin);
+  parent_.core_.setETHRegBitField(ControlRegBank::BANK_DONT_CARE,
+                                  ControlRegAddress::EIE, EIE_INTIE);
 }
 
 /* static */ Receiver::FSM::Transition Receiver::fsmTransitions_[] = {
