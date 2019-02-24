@@ -60,7 +60,7 @@ void Receiver::fsmActionActivate() {
                                     ControlRegAddress::EIE, EIE_INTIE);
 }
 
-void Receiver::fsmActionCheckEIR() {
+void Receiver::fsmActionDispatch() {
   uint8_t eir = parent_.core_.readETHReg(ControlRegBank::BANK_DONT_CARE,
                                          ControlRegAddress::EIR);
 
@@ -80,26 +80,30 @@ void Receiver::fsmActionCheckEIR() {
     parent_.postEvent(Event::TX_DONE);
   }
 
-  if (!currentTxPacket_ && !parent_.txBuffer.empty()) {
-    // We prioritize Tx over Rx.
-    fsm_.pushEvent(FSMEvent::TX_STARTED);
-  } else {
-    fsm_.pushEvent(FSMEvent::RX_STARTED);
-  }
-}
-
-void Receiver::fsmActionRxStartDMA() {
   uint8_t packetCount = parent_.core_.readETHReg(ControlRegBank::BANK_1,
                                                  ControlRegAddress::EPKTCNT);
-  if (packetCount == 0) {
-    fsm_.pushEvent(FSMEvent::RX_ALL_DONE);
-    return;
-  }
-
   if (packetCount > parent_.stats.maxPKTCNT) {
     parent_.stats.maxPKTCNT = packetCount;
   }
 
+  if (!currentTxPacket_ && !parent_.txBuffer.empty()) {
+    // We prioritize Tx over Rx.
+    fsm_.pushEvent(FSMEvent::TX_STARTED);
+  } else if (packetCount > 0) {
+    fsm_.pushEvent(FSMEvent::RX_STARTED);
+  } else {
+    // We have nothing to do. If we're currently Tx-ing, we need to wait for its
+    // completion. Otherwise we're off!
+
+    if (!!currentTxPacket_) {
+      fsm_.pushEvent(FSMEvent::SLACK_OFF);
+    } else {
+      fsm_.pushEvent(FSMEvent::DEACTIVATE);
+    }
+  }
+}
+
+void Receiver::fsmActionRxStartDMA() {
   // Allocate the new RX packet
   currentRxPacket_ = parent_.packetBuffer_.allocate();
 
@@ -297,8 +301,11 @@ void Receiver::fsmActionDeactivate() {
     {FSMState::ACTIVE,          FSMEvent::TX_STARTED,       &Receiver::fsmActionTxStartDMA,   FSMState::TX_DMA_PENDING},
     {FSMState::TX_DMA_PENDING,  FSMEvent::TX_DMA_COMPLETE,  &Receiver::fsmActionTxCleanup,    FSMState::ACTIVE},
 
+    // Slack off path
+    {FSMState::ACTIVE,          FSMEvent::SLACK_OFF,        nullptr,                          FSMState::ACTIVE},
+
     // Deactivation
-    {FSMState::RX_DMA_PENDING,  FSMEvent::RX_ALL_DONE,      &Receiver::fsmActionDeactivate,   FSMState::IDLE},
+    {FSMState::ACTIVE,          FSMEvent::DEACTIVATE,       &Receiver::fsmActionDeactivate,   FSMState::IDLE},
 
     FSM::TransitionTerminator,
     // clang-format on
@@ -306,7 +313,7 @@ void Receiver::fsmActionDeactivate() {
 
 /* static */ Receiver::FSM::StateAction Receiver::fsmStateActions_[] = {
     // clang-format off
-    {FSMState::ACTIVE, &Receiver::fsmActionCheckEIR},
+    {FSMState::ACTIVE, &Receiver::fsmActionDispatch},
 
     FSM::StateActionTerminator,
     // clang-format on

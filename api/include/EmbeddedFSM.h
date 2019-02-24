@@ -80,10 +80,9 @@ public:
           DEBUG_PRINT("%x", transition - transitions_);
         }
 
-        auto oldState = state;
         state = transition->toState;
 
-        if ((oldState != state) && !!stateActions_) {
+        if (!!stateActions_) {
           for (StateAction* stateAction = stateActions_;
                !stateAction->terminator; stateAction++) {
             if (stateAction->state != state) {

@@ -39,10 +39,12 @@ private:
     RX_STARTED,
     RX_BAD_HEADER,
     RX_DMA_COMPLETE,
-    RX_ALL_DONE,
 
     TX_STARTED,
     TX_DMA_COMPLETE,
+
+    SLACK_OFF,
+    DEACTIVATE,
   };
 
   enum class FSMState {
@@ -59,7 +61,7 @@ private:
 
   void fsmActionActivate(void);
 
-  void fsmActionCheckEIR(void);
+  void fsmActionDispatch(void);
 
   void fsmActionRxStartDMA(void);
   void fsmActionRxReset(void);
