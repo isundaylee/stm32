@@ -8,6 +8,8 @@
 extern "C" {
 void* memset(void* ptr, int value, size_t num);
 void* memcpy(void* dst, void* src, size_t num);
+void __aeabi_memset(void* ptr, size_t num, int value);
+void __aeabi_memset4(void* ptr, size_t num, int value);
 }
 
 typedef void (*InterruptHandler)(void);

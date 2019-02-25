@@ -10,7 +10,7 @@ private:
     Node* nextFree = nullptr;
   };
 
-  Node nodes_[n] = {0};
+  Node nodes_[n] = {};
   Node* freeHead_ = nullptr;
 
 public:

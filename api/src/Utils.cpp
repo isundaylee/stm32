@@ -84,6 +84,16 @@ extern "C" void* memcpy(void* dst, void* src, size_t num) {
   return dst;
 }
 
+extern "C" void __aeabi_memset(void* ptr, size_t num, int value) {
+  // TODO: Register limit!!!!!!!!!!!!!
+  memset(ptr, value, num);
+}
+
+extern "C" void __aeabi_memset4(void* ptr, size_t num, int value) {
+  // TODO: Register limit!!!!!!!!!!!!!
+  memset(ptr, value, num);
+}
+
 extern "C" void _putchar(char ch) {
   USART_DEBUG.write(static_cast<uint8_t>(ch));
 }
