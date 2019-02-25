@@ -1,4 +1,4 @@
-#include "enc28j60/Receiver.h"
+#include "enc28j60/Transceiver.h"
 
 #include "enc28j60/ENC28J60.h"
 
@@ -13,7 +13,7 @@ static uint16_t mergeBytes(uint8_t low, uint8_t high) {
   return ((static_cast<uint16_t>(high) << 8) + low);
 }
 
-void Receiver::enable() {
+void Transceiver::enable() {
   parent_.dmaTx_.dma->configureStream(
       parent_.dmaTx_.stream, parent_.dmaTx_.channel,
       DMA::Direction::MEM_TO_PERI, 0, DMA::FIFOThreshold::DIRECT, false,
@@ -27,7 +27,7 @@ void Receiver::enable() {
       false, nullptr, DMA::Size::BYTE, true, nullptr, nullptr);
 }
 
-void Receiver::requestTx() {
+void Transceiver::requestTx() {
   if (txRequestPending_) {
     return;
   }
@@ -36,17 +36,17 @@ void Receiver::requestTx() {
   fsm_.pushEvent(FSMEvent::TX_REQUESTED);
 }
 
-void Receiver::handleTxDMAEvent(DMA::StreamEvent event) {
+void Transceiver::handleTxDMAEvent(DMA::StreamEvent event) {
   if (fsm_.state == FSMState::RX_DMA_PENDING) {
     switch (event.type) {
     case DMA::StreamEventType::TRANSFER_COMPLETE:
-      fsm_.pushEvent(Receiver::FSM::Event::RX_DMA_COMPLETE);
+      fsm_.pushEvent(Transceiver::FSM::Event::RX_DMA_COMPLETE);
       break;
     }
   } else if (fsm_.state == FSMState::TX_DMA_PENDING) {
     switch (event.type) {
     case DMA::StreamEventType::TRANSFER_COMPLETE:
-      fsm_.pushEvent(Receiver::FSM::Event::TX_DMA_COMPLETE);
+      fsm_.pushEvent(Transceiver::FSM::Event::TX_DMA_COMPLETE);
       break;
     }
   } else {
@@ -55,21 +55,21 @@ void Receiver::handleTxDMAEvent(DMA::StreamEvent event) {
 }
 
 void handleTxDMAEventWrapper(DMA::StreamEvent event, void* context) {
-  static_cast<Receiver*>(context)->handleTxDMAEvent(event);
+  static_cast<Transceiver*>(context)->handleTxDMAEvent(event);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // FSM goes round and round...
 ////////////////////////////////////////////////////////////////////////////////
 
-void Receiver::fsmActionActivate() {
+void Transceiver::fsmActionActivate() {
   // We handle interrupt one at a time.
   // Inspiration taken from the Linux kernel driver.
   parent_.core_.clearETHRegBitField(ControlRegBank::BANK_DONT_CARE,
                                     ControlRegAddress::EIE, EIE_INTIE);
 }
 
-void Receiver::fsmActionDispatch() {
+void Transceiver::fsmActionDispatch() {
   uint8_t eir = parent_.core_.readETHReg(ControlRegBank::BANK_DONT_CARE,
                                          ControlRegAddress::EIR);
 
@@ -113,7 +113,7 @@ void Receiver::fsmActionDispatch() {
   }
 }
 
-void Receiver::fsmActionRxStartDMA() {
+void Transceiver::fsmActionRxStartDMA() {
   // Allocate the new RX packet
   currentRxPacket_ = parent_.packetBuffer_.allocate();
 
@@ -169,7 +169,7 @@ void Receiver::fsmActionRxStartDMA() {
   }
 }
 
-void Receiver::fsmActionRxReset() {
+void Transceiver::fsmActionRxReset() {
   if (!!currentRxPacket_) {
     parent_.packetBuffer_.free(currentRxPacket_);
   }
@@ -179,7 +179,7 @@ void Receiver::fsmActionRxReset() {
   parent_.stats.rxResets++;
 }
 
-void Receiver::fsmActionRxCleanup() {
+void Transceiver::fsmActionRxCleanup() {
   if (!currentRxPacket_) {
     parent_.stats.rxPacketsLostInDriver++;
   } else {
@@ -234,7 +234,7 @@ void Receiver::fsmActionRxCleanup() {
   currentRxPacket_ = nullptr;
 }
 
-void Receiver::fsmActionTxStartDMA(void) {
+void Transceiver::fsmActionTxStartDMA(void) {
   parent_.txBuffer.pop(currentTxPacket_);
 
   parent_.core_.writeControlReg(
@@ -269,7 +269,7 @@ void Receiver::fsmActionTxStartDMA(void) {
   parent_.spi_->enableTxDMA();
 }
 
-void Receiver::fsmActionTxCleanup(void) {
+void Transceiver::fsmActionTxCleanup(void) {
   parent_.core_.writeBufferMemoryEnd();
 
   parent_.spi_->waitUntilNotBusy();
@@ -298,40 +298,40 @@ void Receiver::fsmActionTxCleanup(void) {
                                   ControlRegAddress::ECON1, ECON1_TXRTS);
 }
 
-void Receiver::fsmActionDeactivate() {
+void Transceiver::fsmActionDeactivate() {
   parent_.core_.setETHRegBitField(ControlRegBank::BANK_DONT_CARE,
                                   ControlRegAddress::EIE, EIE_INTIE);
 }
 
-/* static */ Receiver::FSM::Transition Receiver::fsmTransitions_[] = {
+/* static */ Transceiver::FSM::Transition Transceiver::fsmTransitions_[] = {
     // clang-format off
 
     // Activation
-    {FSMState::IDLE,            FSMEvent::INTERRUPT,        &Receiver::fsmActionActivate,     FSMState::ACTIVE},
-    {FSMState::IDLE,            FSMEvent::TX_REQUESTED,     &Receiver::fsmActionActivate,     FSMState::ACTIVE},
+    {FSMState::IDLE,            FSMEvent::INTERRUPT,        &Transceiver::fsmActionActivate,     FSMState::ACTIVE},
+    {FSMState::IDLE,            FSMEvent::TX_REQUESTED,     &Transceiver::fsmActionActivate,     FSMState::ACTIVE},
 
     // Rx path
-    {FSMState::ACTIVE,          FSMEvent::RX_STARTED,       &Receiver::fsmActionRxStartDMA,   FSMState::RX_DMA_PENDING},
-    {FSMState::RX_DMA_PENDING,  FSMEvent::RX_BAD_HEADER,    &Receiver::fsmActionRxReset,      FSMState::ACTIVE},
-    {FSMState::RX_DMA_PENDING,  FSMEvent::RX_DMA_COMPLETE,  &Receiver::fsmActionRxCleanup,    FSMState::ACTIVE},
+    {FSMState::ACTIVE,          FSMEvent::RX_STARTED,       &Transceiver::fsmActionRxStartDMA,   FSMState::RX_DMA_PENDING},
+    {FSMState::RX_DMA_PENDING,  FSMEvent::RX_BAD_HEADER,    &Transceiver::fsmActionRxReset,      FSMState::ACTIVE},
+    {FSMState::RX_DMA_PENDING,  FSMEvent::RX_DMA_COMPLETE,  &Transceiver::fsmActionRxCleanup,    FSMState::ACTIVE},
 
     // Tx path
-    {FSMState::ACTIVE,          FSMEvent::TX_STARTED,       &Receiver::fsmActionTxStartDMA,   FSMState::TX_DMA_PENDING},
-    {FSMState::TX_DMA_PENDING,  FSMEvent::TX_DMA_COMPLETE,  &Receiver::fsmActionTxCleanup,    FSMState::ACTIVE},
+    {FSMState::ACTIVE,          FSMEvent::TX_STARTED,       &Transceiver::fsmActionTxStartDMA,   FSMState::TX_DMA_PENDING},
+    {FSMState::TX_DMA_PENDING,  FSMEvent::TX_DMA_COMPLETE,  &Transceiver::fsmActionTxCleanup,    FSMState::ACTIVE},
 
     // Slack off path
     {FSMState::ACTIVE,          FSMEvent::SLACK_OFF,        nullptr,                          FSMState::ACTIVE},
 
     // Deactivation
-    {FSMState::ACTIVE,          FSMEvent::DEACTIVATE,       &Receiver::fsmActionDeactivate,   FSMState::IDLE},
+    {FSMState::ACTIVE,          FSMEvent::DEACTIVATE,       &Transceiver::fsmActionDeactivate,   FSMState::IDLE},
 
     FSM::TransitionTerminator,
     // clang-format on
 };
 
-/* static */ Receiver::FSM::StateAction Receiver::fsmStateActions_[] = {
+/* static */ Transceiver::FSM::StateAction Transceiver::fsmStateActions_[] = {
     // clang-format off
-    {FSMState::ACTIVE, &Receiver::fsmActionDispatch},
+    {FSMState::ACTIVE, &Transceiver::fsmActionDispatch},
 
     FSM::StateActionTerminator,
     // clang-format on

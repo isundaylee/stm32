@@ -74,7 +74,7 @@ void ENC28J60::enable(SPI* spi, GPIO::Pin pinCS, GPIO::Pin pinInt,
                                        GPIO::TriggerDirection::FALLING_EDGE,
                                        handleInterruptWrapper, this);
 
-  receiver_.enable();
+  transceiver_.enable();
 
   initializeETH();
   initializeMAC();
@@ -148,7 +148,7 @@ void ENC28J60::resetRx() {
 ////////////////////////////////////////////////////////////////////////////////
 
 void ENC28J60::handleInterrupt() {
-  receiver_.fsm_.pushEvent(Receiver::FSM::Event::INTERRUPT);
+  transceiver_.fsm_.pushEvent(Transceiver::FSM::Event::INTERRUPT);
 }
 
 void handleInterruptWrapper(void* context) {
@@ -165,7 +165,7 @@ void ENC28J60::postEvent(Event event) {
 // API (except initialization)
 ////////////////////////////////////////////////////////////////////////////////
 
-void ENC28J60::process() { receiver_.fsm_.processOneEvent(); }
+void ENC28J60::process() { transceiver_.fsm_.processOneEvent(); }
 
 bool ENC28J60::linkIsUp() {
   return BIT_IS_SET(core_.readPHYReg(PHYRegAddress::PHSTAT1), PHSTAT1_LLSTAT);
@@ -181,7 +181,7 @@ void ENC28J60::freePacket(Packet* packet) {
 void ENC28J60::transmit(Packet* packet) {
   // TODO: Error handling?
   if (txBuffer.push(packet)) {
-    receiver_.requestTx();
+    transceiver_.requestTx();
   }
 }
 

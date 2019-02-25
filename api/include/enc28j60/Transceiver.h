@@ -17,7 +17,7 @@ void handleRxDMAEventWrapper(DMA::StreamEvent event, void* context);
 
 class ENC28J60;
 
-class Receiver {
+class Transceiver {
 private:
   ENC28J60& parent_;
 
@@ -58,7 +58,7 @@ private:
 
   bool txRequestPending_ = false;
 
-  using FSM = EmbeddedFSM<Receiver, FSMState, FSMEvent, false>;
+  using FSM = EmbeddedFSM<Transceiver, FSMState, FSMEvent, false>;
   FSM fsm_;
 
   void fsmActionActivate(void);
@@ -77,7 +77,7 @@ private:
   static FSM::Transition fsmTransitions_[];
   static FSM::StateAction fsmStateActions_[];
 
-  Receiver(ENC28J60& parent)
+  Transceiver(ENC28J60& parent)
       : parent_(parent),
         fsm_(FSM::State::IDLE, *this, fsmTransitions_, fsmStateActions_) {}
 

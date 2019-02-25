@@ -9,7 +9,7 @@
 namespace enc28j60 {
 
 class ENC28J60;
-class Receiver;
+class Transceiver;
 
 class Core {
 private:
@@ -44,7 +44,7 @@ private:
   void writeBufferMemoryEnd();
 
   friend class ENC28J60;
-  friend class Receiver;
+  friend class Transceiver;
 };
 
 }; // namespace enc28j60

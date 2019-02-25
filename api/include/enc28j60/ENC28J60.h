@@ -2,7 +2,7 @@
 
 #include "enc28j60/Consts.h"
 #include "enc28j60/Core.h"
-#include "enc28j60/Receiver.h"
+#include "enc28j60/Transceiver.h"
 
 #include <DMA.h>
 #include <GPIO.h>
@@ -44,7 +44,7 @@ struct Stats {
     rxResets = 0;
 
     txPacketsFailed = 0;
-    
+
     maxPKTCNT = 0;
   }
 };
@@ -65,7 +65,7 @@ private:
   void* eventHandlerContext_;
 
   Core core_;
-  Receiver receiver_;
+  Transceiver transceiver_;
 
   FreeListBuffer<Packet, PACKET_BUFFER_SIZE> packetBuffer_;
 
@@ -90,7 +90,7 @@ public:
   Stats stats;
 
   // High-level interface
-  ENC28J60() : core_(*this), receiver_(*this) {}
+  ENC28J60() : core_(*this), transceiver_(*this) {}
 
   void enable(SPI* spi, GPIO::Pin pinCS, GPIO::Pin pinInt, DMA::Channel dmaTx,
               DMA::Channel dmaRx, Mode mode, EventHandler eventHandler,
@@ -106,7 +106,7 @@ public:
   void transmit(Packet* packet);
 
   friend class Core;
-  friend class Receiver;
+  friend class Transceiver;
   friend class Transmitter;
 };
 
