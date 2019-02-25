@@ -34,6 +34,8 @@ set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 add_compile_options(
     -target arm-none-eabi
 
+    -fshort-enums
+
     -mthumb
     -mcpu=cortex-m4
     -mfloat-abi=soft

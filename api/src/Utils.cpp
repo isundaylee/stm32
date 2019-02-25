@@ -76,9 +76,11 @@ extern "C" void* memset(void* ptr, int value, size_t num) {
   return ptr;
 }
 
-extern "C" void* memcpy(void* dst, void* src, size_t num) {
+extern "C" void* memcpy(void* __restrict dst, const void* __restrict src,
+                        size_t num) {
   for (size_t i = 0; i < num; i++) {
-    static_cast<unsigned char*>(dst)[i] = static_cast<unsigned char*>(src)[i];
+    static_cast<unsigned char*>(dst)[i] =
+        static_cast<const unsigned char*>(src)[i];
   }
 
   return dst;
@@ -97,6 +99,17 @@ extern "C" void __aeabi_memset4(void* ptr, size_t num, int value) {
 extern "C" void _putchar(char ch) {
   USART_DEBUG.write(static_cast<uint8_t>(ch));
 }
+
+// TODO: LOL
+extern "C" void* malloc(size_t) { return NULL; }
+extern "C" void free(void*) {}
+volatile unsigned int pico_ms_tick;
+
+extern "C" int memcmp(const void*, const void*, size_t) { return 0; }
+extern "C" int strcasecmp(const char*, const char*) { return 0; }
+extern "C" int strcmp(const char*, const char*) { return 0; }
+extern "C" char* strcpy(char* dest, const char*) { return dest; }
+extern "C" size_t strlen(const char*) { return 0; }
 
 void setDebugPin0() { PIN_DEBUG_0.gpio->set(PIN_DEBUG_0.pin); }
 void clearDebugPin0() { PIN_DEBUG_0.gpio->clear(PIN_DEBUG_0.pin); }

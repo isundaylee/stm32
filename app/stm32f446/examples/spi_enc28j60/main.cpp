@@ -12,6 +12,10 @@
 #include <Timer.h>
 #include <USART.h>
 
+extern "C" {
+#include <pico_stack.h>
+}
+
 #include <enc28j60/ENC28J60.h>
 
 #define DUMP_PACKET_HEADERS 0
@@ -24,7 +28,6 @@ static const uint8_t MAC3 = 0x08;
 static const uint8_t MAC4 = 0xA5;
 static const uint8_t MAC5 = 0x38;
 static const uint8_t MAC6 = 0x42;
-
 enum class Event {
   ETHERNET_RX_NEW_PACKET,
   ETHERNET_RX_OVERFLOW,
