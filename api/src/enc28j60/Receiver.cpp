@@ -141,24 +141,32 @@ void Receiver::fsmActionRxStartDMA() {
   // Starts DMA transactions to read packet frame
   currentRxDMATransactionSize_ = frameLen + (frameLen % 2);
 
-  parent_.core_.readBufferMemoryStart();
-  parent_.spi_->enableRxDMA();
+  if (!currentRxPacket_) {
+    // We're out of space in our Rx buffer.
+    // Just fake the read instead of wasting time actually reading.
+    parent_.core_.fakeReadBufferMemory(currentRxDMATransactionSize_);
 
-  uint8_t* rxDst =
-      (!!currentRxPacket_ ? currentRxPacket_->frame : &devNullFrame_);
-  bool rxDstInc = (!!currentRxPacket_ ? true : false);
+    fsm_.pushEvent(FSMEvent::RX_DMA_COMPLETE);
+  } else {
+    parent_.core_.readBufferMemoryStart();
+    parent_.spi_->enableRxDMA();
 
-  parent_.dmaTx_.dma->reconfigureMemory(parent_.dmaTx_.stream,
-                                        currentRxDMATransactionSize_, rxDst,
-                                        DMA::Size::BYTE, rxDstInc);
-  parent_.dmaRx_.dma->reconfigureMemory(parent_.dmaRx_.stream,
-                                        currentRxDMATransactionSize_, rxDst,
-                                        DMA::Size::BYTE, rxDstInc);
+    uint8_t* rxDst =
+        (!!currentRxPacket_ ? currentRxPacket_->frame : &devNullFrame_);
+    bool rxDstInc = (!!currentRxPacket_ ? true : false);
 
-  parent_.dmaTx_.dma->enableStream(parent_.dmaTx_.stream);
-  parent_.dmaRx_.dma->enableStream(parent_.dmaRx_.stream);
+    parent_.dmaTx_.dma->reconfigureMemory(parent_.dmaTx_.stream,
+                                          currentRxDMATransactionSize_, rxDst,
+                                          DMA::Size::BYTE, rxDstInc);
+    parent_.dmaRx_.dma->reconfigureMemory(parent_.dmaRx_.stream,
+                                          currentRxDMATransactionSize_, rxDst,
+                                          DMA::Size::BYTE, rxDstInc);
 
-  parent_.spi_->enableTxDMA();
+    parent_.dmaTx_.dma->enableStream(parent_.dmaTx_.stream);
+    parent_.dmaRx_.dma->enableStream(parent_.dmaRx_.stream);
+
+    parent_.spi_->enableTxDMA();
+  }
 }
 
 void Receiver::fsmActionRxReset() {
@@ -172,25 +180,38 @@ void Receiver::fsmActionRxReset() {
 }
 
 void Receiver::fsmActionRxCleanup() {
-  parent_.core_.readBufferMemoryEnd(currentRxDMATransactionSize_);
+  if (!currentRxPacket_) {
+    parent_.stats.rxPacketsLostInDriver++;
+  } else {
+    parent_.core_.readBufferMemoryEnd(currentRxDMATransactionSize_);
 
-  parent_.spi_->waitUntilNotBusy();
-  auto numberOfData =
-      parent_.dmaRx_.dma->getNumberOfData(parent_.dmaRx_.stream);
-  auto success = true;
-  if (numberOfData != 0) {
-    DEBUG_ASSERT(BIT_IS_SET(parent_.spi_->getRaw()->SR, SPI_SR_OVR),
-                 "Rx DMA incomplete without SPI overrun.");
+    parent_.spi_->waitUntilNotBusy();
+    auto numberOfData =
+        parent_.dmaRx_.dma->getNumberOfData(parent_.dmaRx_.stream);
+    auto success = true;
+    if (numberOfData != 0) {
+      DEBUG_ASSERT(BIT_IS_SET(parent_.spi_->getRaw()->SR, SPI_SR_OVR),
+                   "Rx DMA incomplete without SPI overrun.");
 
-    success = false;
+      success = false;
 
-    parent_.dmaRx_.dma->disableStream(parent_.dmaRx_.stream);
-    FORCE_READ(parent_.spi_->getRaw()->DR);
-    FORCE_READ(parent_.spi_->getRaw()->SR);
+      parent_.dmaRx_.dma->disableStream(parent_.dmaRx_.stream);
+      FORCE_READ(parent_.spi_->getRaw()->DR);
+      FORCE_READ(parent_.spi_->getRaw()->SR);
+    }
+
+    parent_.spi_->disableRxDMA();
+    parent_.spi_->disableTxDMA();
+
+    if (success) {
+      parent_.rxBuffer.push(currentRxPacket_);
+
+      parent_.stats.rxBytes += currentRxPacket_->frameLength;
+      parent_.stats.rxPackets++;
+    } else {
+      parent_.stats.rxPacketsFailed++;
+    }
   }
-
-  parent_.spi_->disableRxDMA();
-  parent_.spi_->disableTxDMA();
 
   uint16_t* packetHeader =
       (!!currentRxPacket_ ? currentRxPacket_->header : devNullHeader_);
@@ -206,19 +227,6 @@ void Receiver::fsmActionRxCleanup() {
                                 highByte(newERXRDPT));
   parent_.core_.setETHRegBitField(ControlRegBank::BANK_0,
                                   ControlRegAddress::ECON2, ECON2_PKTDEC);
-
-  if (!!currentRxPacket_) {
-    if (success) {
-      parent_.rxBuffer.push(currentRxPacket_);
-
-      parent_.stats.rxBytes += currentRxPacket_->frameLength;
-      parent_.stats.rxPackets++;
-    } else {
-      parent_.stats.rxPacketsFailed++;
-    }
-  } else {
-    parent_.stats.rxPacketsLostInDriver++;
-  }
 
   parent_.postEvent((!!currentRxPacket_) ? Event::RX_NEW_PACKET
                                          : Event::RX_OVERFLOW);

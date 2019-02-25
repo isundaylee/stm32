@@ -4,6 +4,10 @@
 
 namespace enc28j60 {
 
+// TODO: Fix dup!
+static uint8_t lowByte(uint16_t num) { return (num & 0x00FF); }
+static uint8_t highByte(uint16_t num) { return (num & 0xFF00) >> 8; }
+
 ////////////////////////////////////////////////////////////////////////////////
 // Low-level interface
 ////////////////////////////////////////////////////////////////////////////////
@@ -146,6 +150,16 @@ void Core::readBufferMemory(uint16_t* data, size_t len) {
   readBufferMemoryStart();
   parent_.spi_->transact(data, len);
   readBufferMemoryEnd(len);
+}
+
+void Core::fakeReadBufferMemory(size_t len) {
+  currentReadPointer_ += len;
+  currentReadPointer_ %= (CONFIG_ERXND + 1);
+
+  writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERDPTL,
+                  lowByte(currentReadPointer_));
+  writeControlReg(ControlRegBank::BANK_0, ControlRegAddress::ERDPTH,
+                  highByte(currentReadPointer_));
 }
 
 void Core::writeBufferMemoryStart() {

@@ -38,7 +38,8 @@ private:
   void readBufferMemory(uint16_t* data, size_t len);
   void readBufferMemoryStart();
   void readBufferMemoryEnd(size_t bytesRead);
-  
+  void fakeReadBufferMemory(size_t len);
+
   void writeBufferMemoryStart();
   void writeBufferMemoryEnd();
 
