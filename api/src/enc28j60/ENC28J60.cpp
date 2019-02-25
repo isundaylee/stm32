@@ -179,12 +179,10 @@ void ENC28J60::freePacket(Packet* packet) {
 }
 
 void ENC28J60::transmit(Packet* packet) {
-  if (txBuffer.empty() && receiver_.fsm_.state == Receiver::FSMState::IDLE) {
-    receiver_.fsm_.pushEvent(Receiver::FSMEvent::TX_REQUESTED);
-  }
-
   // TODO: Error handling?
-  txBuffer.push(packet);
+  if (txBuffer.push(packet)) {
+    receiver_.requestTx();
+  }
 }
 
 }; // namespace enc28j60

@@ -27,6 +27,15 @@ void Receiver::enable() {
       false, nullptr, DMA::Size::BYTE, true, nullptr, nullptr);
 }
 
+void Receiver::requestTx() {
+  if (txRequestPending_) {
+    return;
+  }
+
+  txRequestPending_ = true;
+  fsm_.pushEvent(FSMEvent::TX_REQUESTED);
+}
+
 void Receiver::handleTxDMAEvent(DMA::StreamEvent event) {
   if (fsm_.state == FSMState::RX_DMA_PENDING) {
     switch (event.type) {
@@ -98,6 +107,7 @@ void Receiver::fsmActionDispatch() {
     if (!!currentTxPacket_) {
       fsm_.pushEvent(FSMEvent::SLACK_OFF);
     } else {
+      txRequestPending_ = false;
       fsm_.pushEvent(FSMEvent::DEACTIVATE);
     }
   }

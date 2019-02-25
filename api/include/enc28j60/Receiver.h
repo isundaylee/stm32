@@ -56,6 +56,8 @@ private:
     TX_DMA_PENDING,
   };
 
+  bool txRequestPending_ = false;
+
   using FSM = EmbeddedFSM<Receiver, FSMState, FSMEvent, false>;
   FSM fsm_;
 
@@ -80,6 +82,8 @@ private:
         fsm_(FSM::State::IDLE, *this, fsmTransitions_, fsmStateActions_) {}
 
   void enable();
+
+  void requestTx();
 
   friend class ENC28J60;
 };
