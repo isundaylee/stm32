@@ -28,6 +28,7 @@ function(add_app)
     target_link_libraries(${ARG_APP_NAME}
         picotcp
         -Wl,--whole-archive ${ARG_DEVICE_NAME}Lib -Wl,--no-whole-archive
+        tinyc
         )
 
     target_compile_options(${ARG_APP_NAME}
