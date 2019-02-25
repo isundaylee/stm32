@@ -130,11 +130,11 @@ uint16_t calculateChecksum(uint8_t const* data, size_t len) {
   }
 
   if (len == 1) {
-    checksum += data[0];
+    checksum += (static_cast<uint32_t>(data[0]) << 8);
   }
 
   while ((checksum >> 16) != 0) {
-    checksum = (checksum & 0xFFFF) + 1;
+    checksum = (checksum & 0xFFFF) + (checksum >> 16);
   }
 
   return ~static_cast<uint16_t>(checksum);
