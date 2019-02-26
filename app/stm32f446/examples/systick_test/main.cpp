@@ -24,7 +24,7 @@ extern "C" void main() {
   Tick::enable();
 
   while (true) {
-    DELAY(1000000);
+    Tick::delay(1000);
     DEBUG_PRINT("Tick value: %d\r\n", Tick::value);
   }
 }

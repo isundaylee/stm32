@@ -16,3 +16,8 @@ extern "C" void isrSysTick() {
   // TODO: Get the value dynamically.
   SysTick_Config(Clock::sysclkFrequency / 1000);
 }
+
+/* static*/ void Tick::delay(size_t ms) {
+  size_t start = value;
+  WAIT_UNTIL((value - start) >= ms);
+}
