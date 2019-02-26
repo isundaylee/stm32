@@ -14,25 +14,3 @@ int memcmp(const void* a, const void* b, size_t n) {
   (void)n;
   return 0;
 }
-
-int strcasecmp(const char* a, const char* b) {
-  (void)a;
-  (void)b;
-  return 0;
-}
-
-int strcmp(const char* a, const char* b) {
-  (void)a;
-  (void)b;
-  return 0;
-}
-
-char* strcpy(char* dest, const char* src) {
-  (void)src;
-  return dest;
-}
-
-size_t strlen(const char* str) {
-  (void)str;
-  return 0;
-}
