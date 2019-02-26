@@ -16,10 +16,7 @@ extern "C" void main() {
   Clock::configurePLL(8, 128);
   Clock::switchSysclk(Clock::SysclkSource::PLL);
 
-  GPIO_A.enable();
-  GPIO_A.setMode(9, GPIO::PinMode::ALTERNATE, 7);  // TX
-  GPIO_A.setMode(10, GPIO::PinMode::ALTERNATE, 7); // RX
-  USART_1.enable(115200);
+  DEBUG_INIT();
 
   Tick::enable();
 

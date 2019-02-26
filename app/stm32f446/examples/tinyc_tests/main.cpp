@@ -11,10 +11,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 extern "C" void main() {
-  GPIO_A.enable();
-  GPIO_A.setMode(9, GPIO::PinMode::ALTERNATE, 7);  // TX
-  GPIO_A.setMode(10, GPIO::PinMode::ALTERNATE, 7); // RX
-  USART_1.enable(115200);
+  DEBUG_INIT();
 
   char bufa[10] = "garbage";
   char const* cb;

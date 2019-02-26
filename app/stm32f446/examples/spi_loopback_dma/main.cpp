@@ -43,11 +43,7 @@ void handleTxDMAEvent(DMA::StreamEvent event, void*) {
 }
 
 static void initialize() {
-  // Sets up USART 1
-  GPIO_A.enable();
-  GPIO_A.setMode(9, GPIO::PinMode::ALTERNATE, 7);  // TX
-  GPIO_A.setMode(10, GPIO::PinMode::ALTERNATE, 7); // RX
-  USART_1.enable(115200);
+  DEBUG_INIT();
 
   // Sets up SPI 2
   GPIO_B.enable();

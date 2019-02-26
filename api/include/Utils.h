@@ -41,11 +41,14 @@ typedef void (*InterruptHandler)(void);
 
 #define E2I(e) (static_cast<uint32_t>(e))
 
+void debugInit();
 void setDebugPin0();
 void clearDebugPin0();
 void setDebugPin1();
 void clearDebugPin1();
 void handleAssertionFailure(char const* message);
+
+#define DEBUG_INIT debugInit
 
 #define DEBUG_PRINT(...) printf(__VA_ARGS__)
 #define DEBUG_ASSERT(cond, message)                                            \

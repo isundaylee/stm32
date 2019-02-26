@@ -6,6 +6,7 @@
 #if 1
 
 constexpr USART& USART_DEBUG = USART_1;
+constexpr uint32_t USART_BAUD_DEBUG = 115200;
 constexpr GPIO::Pin PIN_DEBUG_0 = {&GPIO_C, 8};
 constexpr GPIO::Pin PIN_DEBUG_1 = {&GPIO_C, 7};
 
@@ -103,6 +104,13 @@ extern "C" void __aeabi_memclr(void* ptr, size_t num) {
 
 extern "C" void _putchar(char ch) {
   USART_DEBUG.write(static_cast<uint8_t>(ch));
+}
+
+void debugInit() {
+  GPIO_A.enable();
+  GPIO_A.setMode(9, GPIO::PinMode::ALTERNATE, 7);  // TX
+  GPIO_A.setMode(10, GPIO::PinMode::ALTERNATE, 7); // RX
+  USART_1.enable(USART_BAUD_DEBUG);
 }
 
 void setDebugPin0() { PIN_DEBUG_0.gpio->set(PIN_DEBUG_0.pin); }
