@@ -5,9 +5,9 @@
 
 #define ALIGNMENT 4
 
-uint8_t heap[HEAP_SIZE];
-uint8_t* heap_cur = heap;
-uint8_t* heap_top = heap + HEAP_SIZE;
+static uint8_t __attribute__((aligned(4))) heap[HEAP_SIZE];
+static uint8_t* heap_cur = heap;
+static uint8_t* heap_top = heap + HEAP_SIZE;
 
 void* malloc(size_t size) {
   if (heap_cur + size > heap_top) {
