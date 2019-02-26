@@ -9,6 +9,7 @@
 #include <GPIO.h>
 #include <RingBuffer.h>
 #include <SPI.h>
+#include <Tick.h>
 #include <Timer.h>
 #include <USART.h>
 
@@ -304,6 +305,8 @@ extern "C" void main() {
   GPIO_C.setMode(8, GPIO::PinMode::OUTPUT);
   GPIO_C.set(8);
   GPIO_C.setMode(9, GPIO::PinMode::INPUT);
+
+  Tick::enable();
 
   printf("Hello, picotcp!\r\n");
 
