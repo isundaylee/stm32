@@ -14,6 +14,7 @@
 
 extern "C" {
 #include <pico_device.h>
+#include <pico_dhcp_client.h>
 #include <pico_icmp4.h>
 #include <pico_ipv4.h>
 #include <pico_stack.h>
@@ -183,6 +184,8 @@ static void processEvents() {
   }
 }
 
+uint32_t picoDHCPXID;
+
 static int picoSend(struct pico_device* dev, void* buf, int len) {
   FORCE_READ(dev);
 
@@ -237,6 +240,33 @@ struct pico_device* picoCreateDevice(char const* name,
   return dev;
 }
 
+void picoHandleDHCPEvent(void* arg, int code) {
+  switch (code) {
+  case PICO_DHCP_SUCCESS: {
+    char buf[16];
+    auto ip = pico_dhcp_get_address(arg);
+    auto gateway = pico_dhcp_get_gateway(arg);
+
+    pico_ipv4_to_string(buf, ip.addr);
+    DEBUG_PRINT("DHCP: IP address      %s\r\n", buf);
+    pico_ipv4_to_string(buf, gateway.addr);
+    DEBUG_PRINT("DHCP: Gateway address %s\r\n", buf);
+
+    break;
+  }
+
+  case PICO_DHCP_ERROR: {
+    DEBUG_PRINT("DHCP: Received ERROR event.\r\n");
+    break;
+  }
+
+  case PICO_DHCP_RESET: {
+    DEBUG_PRINT("DHCP: Received RESET event.\r\n");
+    break;
+  }
+  }
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // Main!
 ////////////////////////////////////////////////////////////////////////////////
@@ -283,10 +313,12 @@ extern "C" void main() {
 
   auto dev = picoCreateDevice("eth0", MAC);
 
-  struct pico_ip4 ip, netmask;
-  pico_string_to_ipv4("10.0.88.206", &ip.addr);
-  pico_string_to_ipv4("255.255.255.0", &netmask.addr);
-  pico_ipv4_link_add(dev, ip, netmask);
+  if (pico_dhcp_initiate_negotiation(dev, picoHandleDHCPEvent, &picoDHCPXID) !=
+      0) {
+    DEBUG_FAIL("pico_dhcp_initiate_negotiation() failed.");
+  }
+
+  DEBUG_PIN_1_CLEAR();
 
   while (true) {
     eth.process();
