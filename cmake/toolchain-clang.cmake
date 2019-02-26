@@ -48,6 +48,7 @@ add_compile_options(
     -Wall
     -Wextra
     -Wold-style-cast
+    -Wno-address-of-packed-member
     -Werror
     )
 
