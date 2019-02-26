@@ -1,5 +1,6 @@
 #include <Utils.h>
 
+#include <stdlib.h>
 #include <string.h>
 
 #include <GPIO.h>
@@ -41,6 +42,16 @@ extern "C" void main() {
   DEBUG_ASSERT(strcasecmp("B", "a") > 0, "strcmp test case 3 failed.");
   DEBUG_ASSERT(strcasecmp("a", "AA") < 0, "strcmp test case 4 failed.");
   DEBUG_ASSERT(strcasecmp("BB", "b") > 0, "strcmp test case 5 failed.");
+
+  // malloc
+  void *pa = malloc(10), *pb = malloc(12), *pc = malloc(1 << 20);
+  DEBUG_ASSERT(pa != NULL, "malloc test case 1 returned NULL");
+  DEBUG_ASSERT(reinterpret_cast<uintptr_t>(pa) % 4 == 0,
+               "malloc test case 1 not aligned");
+  DEBUG_ASSERT(pb != NULL, "malloc test case 2 returned NULL");
+  DEBUG_ASSERT(reinterpret_cast<uintptr_t>(pb) % 4 == 0,
+               "malloc test case 2 not aligned");
+  DEBUG_ASSERT(pc == NULL, "malloc test case 3 returned non-NULL");
 
   DEBUG_PRINT("All tests passed!\r\n");
 }
