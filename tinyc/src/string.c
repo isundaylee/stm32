@@ -49,3 +49,15 @@ size_t strlen(const char* str) {
 
   return len;
 }
+
+char* strncpy(char* dst, const char* src, size_t n) {
+  for (; (*src != '\0') && (n > 0); dst++, src++, n--) {
+    *dst = *src;
+  }
+
+  for (; n > 0; dst++, n--) {
+    *dst = '\0';
+  }
+
+  return dst;
+}

@@ -60,5 +60,16 @@ extern "C" void main() {
   DEBUG_ASSERT(memcmp(ma, ma, sizeof(ma)) == 0, "memcmp test case 2 failed.");
   DEBUG_ASSERT(memcmp(mb, ma, sizeof(ma)) > 0, "memcmp test case 3 failed.");
 
+  // strncpy
+  cb = "world";
+  strncpy(bufa, cb, sizeof(bufa));
+  DEBUG_ASSERT(strcmp(bufa, cb) == 0,
+               "strncpy test case 1 failed assertion #1.");
+  DEBUG_ASSERT(bufa[5] == '\0', "strncpy test case 1 failed assertion #2.");
+  DEBUG_ASSERT(bufa[6] == '\0', "strncpy test case 1 failed assertion #3.");
+  DEBUG_ASSERT(bufa[7] == '\0', "strncpy test case 1 failed assertion #4.");
+  DEBUG_ASSERT(bufa[8] == '\0', "strncpy test case 1 failed assertion #5.");
+  DEBUG_ASSERT(bufa[9] == '\0', "strncpy test case 1 failed assertion #6.");
+
   DEBUG_PRINT("All tests passed!\r\n");
 }
