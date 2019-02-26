@@ -11,7 +11,7 @@ namespace enc28j60 {
 static uint8_t lowByte(uint16_t num) { return (num & 0x00FF); }
 static uint8_t highByte(uint16_t num) { return (num & 0xFF00) >> 8; }
 
-void ENC28J60::initializeMAC() {
+void ENC28J60::initializeMAC(uint8_t const* macAddress) {
   core_.writeControlReg(ControlRegBank::BANK_2, ControlRegAddress::MACON1,
                         MACON1_MARXEN | MACON1_TXPAUS | MACON1_RXPAUS);
   core_.writeControlReg(ControlRegBank::BANK_2, ControlRegAddress::MACON3,
@@ -30,17 +30,17 @@ void ENC28J60::initializeMAC() {
                         0x12);
 
   core_.writeControlReg(ControlRegBank::BANK_3, ControlRegAddress::MAADR1,
-                        0x11);
+                        macAddress[0]);
   core_.writeControlReg(ControlRegBank::BANK_3, ControlRegAddress::MAADR2,
-                        0x22);
+                        macAddress[1]);
   core_.writeControlReg(ControlRegBank::BANK_3, ControlRegAddress::MAADR3,
-                        0x33);
+                        macAddress[2]);
   core_.writeControlReg(ControlRegBank::BANK_3, ControlRegAddress::MAADR4,
-                        0x44);
+                        macAddress[3]);
   core_.writeControlReg(ControlRegBank::BANK_3, ControlRegAddress::MAADR5,
-                        0x55);
+                        macAddress[4]);
   core_.writeControlReg(ControlRegBank::BANK_3, ControlRegAddress::MAADR6,
-                        0x66);
+                        macAddress[5]);
 }
 
 void ENC28J60::initializeETH() {
@@ -59,7 +59,8 @@ void ENC28J60::initializePHY() {
 
 void ENC28J60::enable(SPI* spi, GPIO::Pin pinCS, GPIO::Pin pinInt,
                       DMA::Channel dmaTx, DMA::Channel dmaRx, Mode mode,
-                      EventHandler eventHandler, void* eventHandlerContext) {
+                      uint8_t const* macAddress, EventHandler eventHandler,
+                      void* eventHandlerContext) {
   spi_ = spi;
   pinCS_ = pinCS;
   pinInt_ = pinInt;
@@ -77,7 +78,7 @@ void ENC28J60::enable(SPI* spi, GPIO::Pin pinCS, GPIO::Pin pinInt,
   transceiver_.enable();
 
   initializeETH();
-  initializeMAC();
+  initializeMAC(macAddress);
   initializePHY();
 }
 

@@ -71,7 +71,7 @@ private:
 
   // Initialization routines
   void initializeETH();
-  void initializeMAC();
+  void initializeMAC(uint8_t const* macAddress);
   void initializePHY();
 
   // Interrupt handlers
@@ -93,8 +93,8 @@ public:
   ENC28J60() : core_(*this), transceiver_(*this) {}
 
   void enable(SPI* spi, GPIO::Pin pinCS, GPIO::Pin pinInt, DMA::Channel dmaTx,
-              DMA::Channel dmaRx, Mode mode, EventHandler eventHandler,
-              void* eventHandlerContext);
+              DMA::Channel dmaRx, Mode mode, uint8_t const* macAddress,
+              EventHandler eventHandler, void* eventHandlerContext);
   void enableRx();
 
   void process();

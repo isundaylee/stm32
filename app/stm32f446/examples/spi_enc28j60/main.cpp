@@ -22,12 +22,8 @@ extern "C" {
 #define DUMP_STATS 1
 #define PRINT_PACKET_INDICATOR 0
 
-static const uint8_t MAC1 = 0xB0;
-static const uint8_t MAC2 = 0xD5;
-static const uint8_t MAC3 = 0x08;
-static const uint8_t MAC4 = 0xA5;
-static const uint8_t MAC5 = 0x38;
-static const uint8_t MAC6 = 0x42;
+static const uint8_t MAC[] = {0xB0, 0xD5, 0x08, 0xA5, 0x38, 0x42};
+
 enum class Event {
   ETHERNET_RX_NEW_PACKET,
   ETHERNET_RX_OVERFLOW,
@@ -100,7 +96,7 @@ void handleTimerInterrupt() { events.push(Event::TIMER_INTERRUPT); }
 static void initializeEthernet() {
   eth.enable(&SPI_2, GPIO::Pin{&GPIO_B, 12}, GPIO::Pin{&GPIO_C, 9},
              DMA::Channel{&DMA_1, 4, 0}, DMA::Channel{&DMA_1, 3, 0},
-             enc28j60::Mode::FULL_DUPLEX, handleEthernetEvent, nullptr);
+             enc28j60::Mode::FULL_DUPLEX, MAC, handleEthernetEvent, nullptr);
 
   printf("Waiting for link");
   while (!eth.linkIsUp()) {
@@ -167,8 +163,8 @@ static void processEthernetRxPackets() {
     }
 
     // Check if the packet is for us
-    if ((f[0] != MAC1) || (f[1] != MAC2) || (f[2] != MAC3) || (f[3] != MAC4) ||
-        (f[4] != MAC5) || (f[5] != MAC6)) {
+    if ((f[0] != MAC[0]) || (f[1] != MAC[1]) || (f[2] != MAC[2]) ||
+        (f[3] != MAC[3]) || (f[4] != MAC[4]) || (f[5] != MAC[5])) {
       eth.freePacket(packet);
       continue;
     }
@@ -195,8 +191,8 @@ static void processEthernetRxPackets() {
     static uint8_t headerTemplate[] = {
         // Ethernet header
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Destination MAC (needs change)
-        MAC1, MAC2, MAC3, MAC4, MAC5, MAC6, // Source MAC
-        0x08, 0x00,                         // Ethertype
+        MAC[0], MAC[1], MAC[2], MAC[3], MAC[4], MAC[5], // Source MAC
+        0x08, 0x00,                                     // Ethertype
         // IP header
         0x45,                   // Version, Header Length
         0x00,                   // ECN
