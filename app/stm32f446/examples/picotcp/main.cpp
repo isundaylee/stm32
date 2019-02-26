@@ -18,6 +18,7 @@ extern "C" {
 #include <pico_dhcp_client.h>
 #include <pico_icmp4.h>
 #include <pico_ipv4.h>
+#include <pico_socket.h>
 #include <pico_stack.h>
 }
 
@@ -241,6 +242,37 @@ struct pico_device* picoCreateDevice(char const* name,
   return dev;
 }
 
+void picoHandleSocketEvent(uint16_t event, struct pico_socket* socket) {
+  if ((event & PICO_SOCK_EV_RD) != 0) {
+    DEBUG_PRINT("Socket: Received RD event.\r\n");
+  }
+
+  if ((event & PICO_SOCK_EV_WR) != 0) {
+    DEBUG_PRINT("Socket: Received WR event.\r\n");
+
+    char const data[] = "Hello\n";
+    if (pico_socket_write(socket, data, strlen(data)) < 0) {
+      DEBUG_FAIL("pico_socket_write() failed.");
+    }
+  }
+
+  if ((event & PICO_SOCK_EV_CONN) != 0) {
+    DEBUG_PRINT("Socket: Received CONN event.\r\n");
+  }
+
+  if ((event & PICO_SOCK_EV_CLOSE) != 0) {
+    DEBUG_PRINT("Socket: Received CLOSE event.\r\n");
+  }
+
+  if ((event & PICO_SOCK_EV_FIN) != 0) {
+    DEBUG_PRINT("Socket: Received FIN event.\r\n");
+  }
+
+  if ((event & PICO_SOCK_EV_ERR) != 0) {
+    DEBUG_PRINT("Socket: Received ERR event.\r\n");
+  }
+}
+
 void picoHandleDHCPEvent(void* arg, int code) {
   switch (code) {
   case PICO_DHCP_SUCCESS: {
@@ -252,6 +284,25 @@ void picoHandleDHCPEvent(void* arg, int code) {
     DEBUG_PRINT("DHCP: IP address      %s\r\n", buf);
     pico_ipv4_to_string(buf, gateway.addr);
     DEBUG_PRINT("DHCP: Gateway address %s\r\n", buf);
+
+    pico_ip4 serverAddr;
+    pico_ip4 inAddr = {0};
+    uint16_t localPort;
+
+    pico_string_to_ipv4("10.0.88.100", &serverAddr.addr);
+    auto socket = pico_socket_open(PICO_PROTO_IPV4, PICO_PROTO_TCP,
+                                   picoHandleSocketEvent);
+    if (!socket) {
+      DEBUG_FAIL("pico_socket_open() failed.");
+    }
+
+    if (pico_socket_bind(socket, &inAddr, &localPort) != 0) {
+      DEBUG_FAIL("pico_socket_bind() failed.");
+    }
+
+    if (pico_socket_connect(socket, &serverAddr, short_be(1234)) != 0) {
+      DEBUG_FAIL("pico_socket_connect() failed.");
+    }
 
     break;
   }
