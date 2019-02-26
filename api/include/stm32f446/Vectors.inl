@@ -33,6 +33,8 @@ extern "C" void isrEXTI4();
 extern "C" void isrEXTI9_5();
 extern "C" void isrEXTI15_10();
 
+extern "C" void isrSysTick();
+
 __attribute__((section(".isr_vectors")))
 __attribute__((used)) static void (*_isrVectors[])() = {
     reinterpret_cast<void (*)()>(0x20000000 + 128 * 1024),
@@ -50,7 +52,7 @@ __attribute__((used)) static void (*_isrVectors[])() = {
     &_spin4,
     &_spin4,
     &_spin2,
-    &_spin2,
+    &isrSysTick,
     &_spin2,
     &_spin2,
     &_spin2,

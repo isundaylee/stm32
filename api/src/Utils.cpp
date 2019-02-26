@@ -100,9 +100,6 @@ extern "C" void _putchar(char ch) {
   USART_DEBUG.write(static_cast<uint8_t>(ch));
 }
 
-// TODO: LOL
-volatile unsigned int pico_ms_tick;
-
 void setDebugPin0() { PIN_DEBUG_0.gpio->set(PIN_DEBUG_0.pin); }
 void clearDebugPin0() { PIN_DEBUG_0.gpio->clear(PIN_DEBUG_0.pin); }
 

@@ -7,6 +7,7 @@ add_library(STM32F446Lib STATIC
     src/stm32f446/DMA.cpp
     src/stm32f446/Flash.cpp
     src/stm32f446/GPIO.cpp
+    src/stm32f446/Tick.cpp
     src/stm32f446/Timer.cpp
     src/stm32f446/USART.cpp
     src/stm32f446/SPI.cpp
