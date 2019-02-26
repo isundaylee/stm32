@@ -96,6 +96,11 @@ extern "C" void __aeabi_memset4(void* ptr, size_t num, int value) {
   memset(ptr, value, num);
 }
 
+extern "C" void __aeabi_memclr(void* ptr, size_t num) {
+  // TODO: Register limit!!!!!!!!!!!!!
+  memset(ptr, 0, num);
+}
+
 extern "C" void _putchar(char ch) {
   USART_DEBUG.write(static_cast<uint8_t>(ch));
 }
