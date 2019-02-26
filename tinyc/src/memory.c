@@ -23,3 +23,16 @@ void* malloc(size_t size) {
 }
 
 void free(void* ptr) { (void)ptr; }
+
+int memcmp(const void* a, const void* b, size_t n) {
+  uint8_t* ua = (uint8_t*)a;
+  uint8_t* ub = (uint8_t*)b;
+
+  for (; n > 0; ua++, ub++, n--) {
+    if (*ua != *ub) {
+      return (*ua < *ub ? -1 : 1);
+    }
+  }
+
+  return 0;
+}

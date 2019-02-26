@@ -53,5 +53,12 @@ extern "C" void main() {
                "malloc test case 2 not aligned");
   DEBUG_ASSERT(pc == NULL, "malloc test case 3 returned non-NULL");
 
+  // memcmp
+  uint8_t ma[] = {0x00, 0x00, 0x00};
+  uint8_t mb[] = {0x00, 0x00, 0x01};
+  DEBUG_ASSERT(memcmp(ma, mb, sizeof(ma)) < 0, "memcmp test case 1 failed.");
+  DEBUG_ASSERT(memcmp(ma, ma, sizeof(ma)) == 0, "memcmp test case 2 failed.");
+  DEBUG_ASSERT(memcmp(mb, ma, sizeof(ma)) > 0, "memcmp test case 3 failed.");
+
   DEBUG_PRINT("All tests passed!\r\n");
 }
