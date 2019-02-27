@@ -10,6 +10,10 @@ SECTIONS
     {
         KEEP(* (.isr_vectors))
         * (.text)
+    } > flash
+
+    .rodata :
+    {
         * (.rodata)
     } > flash
 
