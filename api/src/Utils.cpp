@@ -1,5 +1,7 @@
 #include <Utils.h>
 
+#include <stdlib.h>
+
 #include <GPIO.h>
 #include <USART.h>
 
@@ -9,6 +11,9 @@ constexpr USART& USART_DEBUG = USART_1;
 constexpr uint32_t USART_BAUD_DEBUG = 115200;
 constexpr GPIO::Pin PIN_DEBUG_0 = {&GPIO_C, 8};
 constexpr GPIO::Pin PIN_DEBUG_1 = {&GPIO_C, 7};
+
+void* operator new(size_t size) { return malloc(size); }
+void operator delete(void* ptr) { free(ptr); }
 
 const char* HexString(uint32_t n, size_t len /*=0*/) {
   static char buffer[11];

@@ -35,6 +35,7 @@ add_compile_options(
     -target arm-none-eabi
 
     -fshort-enums
+    -fcoroutines-ts
 
     -mthumb
     -mcpu=cortex-m4

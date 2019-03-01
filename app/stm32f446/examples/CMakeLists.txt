@@ -1,5 +1,6 @@
 add_subdirectory(clock_mco2)
 add_subdirectory(clock_sysclk_source)
+add_subdirectory(coroutine_test)
 add_subdirectory(gpio_blinky)
 add_subdirectory(picotcp)
 add_subdirectory(spi_enc28j60)

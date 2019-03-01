@@ -29,6 +29,7 @@ function(add_app)
         picotcp
         -Wl,--whole-archive ${ARG_DEVICE_NAME}Lib -Wl,--no-whole-archive
         tinyc
+        coro
         )
 
     target_compile_options(${ARG_APP_NAME}
