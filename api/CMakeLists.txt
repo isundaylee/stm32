@@ -3,6 +3,7 @@ add_library(STM32F446Lib STATIC
     src/Utils.cpp
     src/stm32f446/ADC.cpp
     src/stm32f446/Clock.cpp
+    src/stm32f446/CoroSPI.cpp
     src/stm32f446/DAC.cpp
     src/stm32f446/DMA.cpp
     src/stm32f446/Flash.cpp
@@ -26,6 +27,7 @@ target_link_libraries(STM32F446Lib
     PUBLIC
         CMSIS
         printf
+        coro
     PRIVATE
         gcc
     )

@@ -15,6 +15,18 @@ constexpr GPIO::Pin PIN_DEBUG_1 = {&GPIO_C, 7};
 void* operator new(size_t size) { return malloc(size); }
 void operator delete(void* ptr) { free(ptr); }
 
+void* operator new[](size_t size) {
+  auto ptr = malloc(size);
+
+  if (!ptr) {
+    abort();
+  }
+
+  return ptr;
+}
+
+void operator delete[](void* ptr) { free(ptr); }
+
 const char* HexString(uint32_t n, size_t len /*=0*/) {
   static char buffer[11];
   static char* const bufferEnd = &buffer[sizeof(buffer) / sizeof(buffer[0])];
