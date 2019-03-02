@@ -2,8 +2,11 @@
 
 #include "coro/Support.h"
 
-template <size_t TaskQueueSize, size_t WaitAreaSize> struct Scheduler {
-  Scheduler() {}
+template <size_t TaskQueueSize, size_t WaitAreaSize> struct FixedSizeScheduler;
+
+struct Scheduler {
+  Scheduler() = delete;
+
   Scheduler(Scheduler const&) = delete;
   Scheduler& operator=(Scheduler const&) = delete;
   Scheduler(Scheduler&&) = default;
@@ -13,7 +16,7 @@ template <size_t TaskQueueSize, size_t WaitAreaSize> struct Scheduler {
   bool runOnce() {
     bool anyWaiting = false;
 
-    for (size_t i = 0; i < WaitAreaSize; i++) {
+    for (size_t i = 0; i < waitAreaSize_; i++) {
       if (!waitArea_[i].occupied) {
         continue;
       }
@@ -34,7 +37,7 @@ template <size_t TaskQueueSize, size_t WaitAreaSize> struct Scheduler {
 
     if (taskHead_ != taskTail_) {
       auto task = tasks_[taskHead_];
-      taskHead_ = (taskHead_ + 1) % TaskQueueSize;
+      taskHead_ = (taskHead_ + 1) % taskQueueSize_;
       task.resume();
       return false;
     }
@@ -104,7 +107,7 @@ public:
   };
 
   auto allocateWaitToken() {
-    for (size_t i = 0; i < WaitAreaSize; i++) {
+    for (size_t i = 0; i < waitAreaSize_; i++) {
       if (!waitArea_[i].occupied) {
         waitArea_[i].occupied = true;
         return WaitToken{i};
@@ -121,8 +124,8 @@ public:
 
 private:
   // Task queue
-  size_t taskHead_ = 0, taskTail_ = 0;
-  std::experimental::coroutine_handle<> tasks_[TaskQueueSize];
+  size_t taskHead_ = 0, taskTail_ = 0, taskQueueSize_;
+  std::experimental::coroutine_handle<>* tasks_;
 
   // Wait area
   struct WaitEntry {
@@ -131,10 +134,16 @@ private:
     std::experimental::coroutine_handle<> coro = nullptr;
   };
 
-  WaitEntry waitArea_[WaitAreaSize];
+  size_t waitAreaSize_;
+  WaitEntry* waitArea_;
+
+  Scheduler(size_t taskQueueSize, std::experimental::coroutine_handle<>* tasks,
+            size_t waitAreaSize, WaitEntry* waitArea)
+      : taskQueueSize_(taskQueueSize), tasks_(tasks),
+        waitAreaSize_(waitAreaSize), waitArea_(waitArea) {}
 
   void enqueueTask(std::experimental::coroutine_handle<> coro) {
-    auto newTail = (taskTail_ + 1) % TaskQueueSize;
+    auto newTail = (taskTail_ + 1) % taskQueueSize_;
 
     if (newTail == taskHead_) {
       // Full
@@ -144,4 +153,17 @@ private:
     tasks_[taskTail_] = coro;
     taskTail_ = newTail;
   }
+
+  template <size_t TaskQueueSize, size_t WaitAreaSize>
+  friend struct FixedSizeScheduler;
+};
+
+template <size_t TaskQueueSize, size_t WaitAreaSize>
+struct FixedSizeScheduler : public Scheduler {
+  FixedSizeScheduler()
+      : Scheduler(TaskQueueSize, tasks_, WaitAreaSize, waitArea_) {}
+
+private:
+  std::experimental::coroutine_handle<> tasks_[TaskQueueSize];
+  Scheduler::WaitEntry waitArea_[WaitAreaSize];
 };

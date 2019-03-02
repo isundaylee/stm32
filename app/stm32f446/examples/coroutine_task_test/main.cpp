@@ -4,22 +4,20 @@
 
 #include <Timer.h>
 
-using Sched = Scheduler<16, 16>;
-
-Sched sched;
+FixedSizeScheduler<16, 16> sched;
 
 void handleTimerInterrupt(void* context) {
-  sched.postCompletion(Sched::WaitToken::fromContext(context));
+  sched.postCompletion(Scheduler::WaitToken::fromContext(context));
 }
 
-Task<> delay(Sched& sched, Timer& timer, int ms) {
+Task<> delay(Scheduler& sched, Timer& timer, int ms) {
   auto waitToken = sched.allocateWaitToken();
   timer.enable(16000, ms, Timer::Action::ONE_SHOT, handleTimerInterrupt,
                waitToken.toContext());
   co_await sched.waitUntil(waitToken);
 }
 
-Task<> f(Sched& sched, char const* word, Timer& timer, int ms) {
+Task<> f(Scheduler& sched, char const* word, Timer& timer, int ms) {
   for (;;) {
     co_await delay(sched, timer, ms);
     DEBUG_PRINT("%s\r\n", word);
