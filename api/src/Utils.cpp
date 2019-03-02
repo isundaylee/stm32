@@ -107,6 +107,16 @@ extern "C" void __aeabi_memclr(void* ptr, size_t num) {
   memset(ptr, 0, num);
 }
 
+extern "C" void __aeabi_memcpy(void* __restrict dst, const void* __restrict src,
+                               size_t num) {
+  memcpy(dst, src, num);
+}
+
+extern "C" void __aeabi_memcpy4(void* __restrict dst,
+                                const void* __restrict src, size_t num) {
+  memcpy(dst, src, num);
+}
+
 extern "C" void _putchar(char ch) {
   USART_DEBUG.write(static_cast<uint8_t>(ch));
 }
