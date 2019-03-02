@@ -15,11 +15,13 @@ public:
     FinalSuspendAwaiter(std::experimental::coroutine_handle<> cont)
         : cont_(cont) {}
 
-    bool await_ready() { return !cont_; }
+    bool await_ready() { return false; }
 
     template <typename P>
     auto await_suspend(std::experimental::coroutine_handle<P>) {
-      return cont_;
+      if (!!cont_) {
+        cont_.resume();
+      }
     }
 
     void await_resume() {}
@@ -36,19 +38,26 @@ public:
     cont_ = handle;
   }
 
+  bool isReady() { return ready_; }
+  void markReady() { ready_ = true; }
+
 private:
   std::experimental::coroutine_handle<> cont_ = nullptr;
+  bool ready_ = false;
 };
 
 template <> struct TaskPromise<void> : public BaseTaskPromise {
   auto get_return_object();
-  auto return_void() {}
+  auto return_void() { markReady(); }
   void get() {}
 };
 
 template <typename T> struct TaskPromise : public BaseTaskPromise {
   auto get_return_object();
-  auto return_value(T value) { value_ = value; }
+  auto return_value(T value) {
+    value_ = value;
+    markReady();
+  }
   T get() { return value_; }
 
 private:
@@ -61,7 +70,7 @@ template <typename T = void> struct Task {
 public:
   using promise_type = typename detail::TaskPromise<T>;
 
-  bool await_ready() { return false; }
+  bool await_ready() { return coro_.promise().isReady(); }
   void await_suspend(std::experimental::coroutine_handle<> awaiter) {
     coro_.promise().setContinuation(awaiter);
   }
@@ -84,7 +93,7 @@ public:
 
 namespace detail {
 
-auto TaskPromise<void>::get_return_object() {
+inline auto TaskPromise<void>::get_return_object() {
   return Task<void>(
       std::experimental::coroutine_handle<TaskPromise<void>>::from_promise(
           *this));
