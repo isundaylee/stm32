@@ -4,31 +4,28 @@
 
 #include <Timer.h>
 
-static const size_t NUM_TIMERS = 3;
-
 using Sched = Scheduler<16, 16>;
 
 Sched sched;
-Sched::WaitToken tokens[NUM_TIMERS];
+Sched::WaitToken waitTokens[3];
 
-Task<int> waitForTimer(Sched& sched, size_t timerNumber) {
-  co_await sched.waitUntil(tokens[timerNumber]);
-  co_return 100;
+void handleTimerInterrupt(void* context) {
+  sched.postCompletion(*reinterpret_cast<Sched::WaitToken*>(context));
 }
 
-Task<> f(Sched& sched) {
-  int answer = co_await waitForTimer(sched, 0);
-  DEBUG_PRINT("Answer is: %d\r\n", answer);
+Task<> delay(Sched& sched, Timer& timer, int ms, Sched::WaitToken& waitToken) {
+  waitToken = sched.allocateWaitToken();
+  timer.enable(16000, ms, Timer::Action::ONE_SHOT, handleTimerInterrupt,
+               &waitToken);
+  co_await sched.waitUntil(waitToken);
 }
 
-void handleTimerInterrupt() {
-  static size_t count = 0;
-
-  if (count >= 1 && count <= NUM_TIMERS) {
-    sched.postCompletion(tokens[count - 1]);
+Task<> f(Sched& sched, char const* word, Timer& timer, int ms,
+         Sched::WaitToken& waitToken) {
+  for (;;) {
+    co_await delay(sched, timer, ms, waitToken);
+    DEBUG_PRINT("%s\r\n", word);
   }
-
-  count++;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -38,14 +35,10 @@ void handleTimerInterrupt() {
 extern "C" void main() {
   DEBUG_INIT();
 
-  for (size_t i = 0; i < NUM_TIMERS; i++) {
-    tokens[i] = sched.allocateWaitToken();
-  }
-
-  Timer_2.enable(2000, 6000, handleTimerInterrupt);
-
   DEBUG_PRINT("Hello, coroutine!\r\n");
-  auto task = f(sched);
+  Task<> tasks[] = {f(sched, "Ping", Timer_2, 500, waitTokens[0]),
+                    f(sched, "Waz", Timer_3, 750, waitTokens[1]),
+                    f(sched, "Pong", Timer_5, 1250, waitTokens[2])};
   sched.run();
   DEBUG_PRINT("Bye, coroutine!\r\n");
 

@@ -9,19 +9,28 @@ extern "C" void isrTimer5();
 
 class Timer {
 private:
+  using EventHandler = void (*)(void*);
+
   TIM_TypeDef* timer_;
 
-  void (*handler_)();
+  EventHandler handler_;
+  void* handlerContext_;
 
   uint32_t rccBit();
   IRQn_Type irqN();
 
 public:
+  enum class Action {
+    PERIODIC,
+    ONE_SHOT,
+  };
+
   Timer(TIM_TypeDef* timer) : timer_(timer) {}
 
   uint32_t getPeripheralFrequency();
 
-  void enable(uint32_t prescaler, uint32_t overflow, void (*handler)());
+  void enable(uint32_t prescaler, uint32_t overflow, Action action,
+              EventHandler handler, void* handlerContext);
   void disable();
 
   void setOverflow(uint32_t overflow);

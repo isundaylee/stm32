@@ -3,7 +3,7 @@
 
 #define DEFINE_TIMER_ISR(n)                                                    \
   extern "C" void isrTimer##n() {                                              \
-    (*Timer_##n.handler_)();                                                   \
+    (*Timer_##n.handler_)(Timer_##n.handlerContext_);                          \
     TIM##n->SR = ~TIM_SR_UIF;                                                  \
     /* TODO: Fix other cases like this. */                                     \
     FORCE_READ(TIM##n->SR);                                                    \
@@ -51,15 +51,41 @@ uint32_t Timer::getPeripheralFrequency() {
   return 0;
 }
 
-void Timer::enable(uint32_t prescaler, uint32_t overflow, void (*handler)()) {
+void Timer::enable(uint32_t prescaler, uint32_t overflow, Action action,
+                   EventHandler handler, void* handlerContext) {
   handler_ = handler;
+  handlerContext_ = handlerContext;
 
   BIT_SET(RCC->APB1ENR, rccBit());
-  BIT_SET(timer_->DIER, TIM_DIER_UIE);
 
-  timer_->ARR = overflow;
+  // Disable update interrupt while we're setting things up
+  BIT_CLEAR(timer_->DIER, TIM_DIER_UIE);
+  FORCE_READ(timer_->DIER);
+
+  // Setting the prescaler, and applying the setting
   timer_->PSC = prescaler - 1;
+  BIT_SET(timer_->EGR, TIM_EGR_UG);
+  WAIT_UNTIL(BIT_IS_SET(timer_->SR, TIM_SR_UIF));
+  timer_->SR = 0;
 
+  // Settings the counts
+  timer_->ARR = overflow;
+  timer_->CNT = 0;
+
+  switch (action) {
+  case Action::ONE_SHOT: {
+    BIT_SET(timer_->CR1, TIM_CR1_OPM);
+    break;
+  }
+
+  case Action::PERIODIC: {
+    BIT_CLEAR(timer_->CR1, TIM_CR1_OPM);
+    break;
+  }
+  }
+
+  // Re-enable interrupt
+  BIT_SET(timer_->DIER, TIM_DIER_UIE);
   NVIC_EnableIRQ(irqN());
 
   BIT_SET(timer_->CR1, TIM_CR1_ARPE);
