@@ -67,9 +67,14 @@ public:
   struct WaitToken {
     WaitToken() : token_(-1) {}
 
+    void* toContext() { return reinterpret_cast<void*>(token_); }
+    static WaitToken fromContext(void* context) {
+      return WaitToken{reinterpret_cast<size_t>(context)};
+    }
+
   private:
     WaitToken(size_t token) : token_(token) {}
-    int token_;
+    size_t token_;
 
   public:
     friend struct WaitUntilAwaiter;
