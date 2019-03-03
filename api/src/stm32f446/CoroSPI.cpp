@@ -21,12 +21,29 @@ void CoroSPI::enable(SPI* spi, DMA::Channel dmaTx, DMA::Channel dmaRx) {
       true, nullptr, nullptr);
 }
 
-Task<bool> CoroSPI::transact(uint8_t* data, size_t len) {
+Task<bool> CoroSPI::transact(uint8_t* data, size_t len, TransactionType type) {
   if (busy_) {
     co_return false;
   }
 
-  bool useDMA = (len >= CORO_SPI_USE_DMA_LENGTH_THRESHOLD);
+  bool useDMA;
+
+  switch (type) {
+  case TransactionType::SYNC: {
+    useDMA = false;
+    break;
+  }
+
+  case TransactionType::DMA: {
+    useDMA = true;
+    break;
+  }
+
+  case TransactionType::AUTO: {
+    useDMA = (len >= CORO_SPI_USE_DMA_LENGTH_THRESHOLD);
+    break;
+  }
+  }
 
   if (!useDMA) {
     // TODO: Fix this lololol...
@@ -77,9 +94,10 @@ Task<bool> CoroSPI::transact(uint8_t* data, size_t len) {
   }
 }
 
-Task<bool> CoroSPI::transact(GPIO::Pin pinCs, uint8_t* data, size_t len) {
+Task<bool> CoroSPI::transact(GPIO::Pin pinCs, uint8_t* data, size_t len,
+                             TransactionType type) {
   pinCs.gpio->clear(pinCs.pin);
-  auto success = co_await transact(data, len);
+  auto success = co_await transact(data, len, type);
   pinCs.gpio->set(pinCs.pin);
 
   co_return success;

@@ -8,7 +8,8 @@ CoroSPI spi;
 Task<> transactionA() {
   uint8_t data[] = {0x1E, 0x00};
 
-  bool success = co_await spi.transact({&GPIO_B, 12}, data, sizeof(data));
+  bool success = co_await spi.transact({&GPIO_B, 12}, data, sizeof(data),
+                                       CoroSPI::TransactionType::DMA);
 
   DEBUG_PRINT("Transaction A %s with reply 0x%02x 0x%02x\r\n",
               (success ? "succeeded" : "failed"), data[0], data[1]);
@@ -17,7 +18,8 @@ Task<> transactionA() {
 Task<> transactionB() {
   uint8_t data[] = {0x1E, 0x00};
 
-  bool success = co_await spi.transact({&GPIO_B, 12}, data, sizeof(data));
+  bool success = co_await spi.transact({&GPIO_B, 12}, data, sizeof(data),
+                                       CoroSPI::TransactionType::DMA);
 
   DEBUG_PRINT("Transaction B %s with reply 0x%02x 0x%02x\r\n",
               (success ? "succeeded" : "failed"), data[0], data[1]);
