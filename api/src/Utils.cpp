@@ -134,6 +134,14 @@ extern "C" void _putchar(char ch) {
 }
 
 void debugInit() {
+  PIN_DEBUG_0.gpio->enable();
+  PIN_DEBUG_0.gpio->setMode(PIN_DEBUG_0.pin, GPIO::PinMode::OUTPUT);
+  PIN_DEBUG_0.gpio->set(PIN_DEBUG_0.pin);
+
+  PIN_DEBUG_1.gpio->enable();
+  PIN_DEBUG_1.gpio->setMode(PIN_DEBUG_1.pin, GPIO::PinMode::OUTPUT);
+  PIN_DEBUG_1.gpio->set(PIN_DEBUG_1.pin);
+
   GPIO_A.enable();
   GPIO_A.setMode(9, GPIO::PinMode::ALTERNATE, 7);  // TX
   GPIO_A.setMode(10, GPIO::PinMode::ALTERNATE, 7); // RX
