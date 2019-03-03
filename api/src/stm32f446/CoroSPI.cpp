@@ -2,8 +2,6 @@
 
 static const size_t CORO_SPI_USE_DMA_LENGTH_THRESHOLD = 20;
 
-void CoroSPI::bindToScheduler(Scheduler* sched) { sched_ = sched; }
-
 void CoroSPI::enable(SPI* spi, DMA::Channel dmaTx, DMA::Channel dmaRx) {
   spi_ = spi;
   dmaTx_ = dmaTx;
@@ -21,13 +19,9 @@ void CoroSPI::enable(SPI* spi, DMA::Channel dmaTx, DMA::Channel dmaRx) {
       true, nullptr, nullptr);
 }
 
-Task<bool> CoroSPI::transact(uint8_t* data, size_t len, TransactionType type) {
-  if (busy_) {
-    co_return false;
-  }
-
+Task<bool> CoroSPI::transactInner(uint8_t* data, size_t len,
+                                  TransactionType type) {
   bool useDMA;
-
   switch (type) {
   case TransactionType::SYNC: {
     useDMA = false;
@@ -67,16 +61,14 @@ Task<bool> CoroSPI::transact(uint8_t* data, size_t len, TransactionType type) {
     dmaRx_.dma->reconfigureMemory(dmaRx_.stream, len, data, DMA::Size::BYTE,
                                   true);
 
-    pendingWaitToken_ = sched_->allocateWaitToken();
+    pendingWaitToken_ = sched_.allocateWaitToken();
 
     spi_->enableRxDMA();
     dmaTx_.dma->enableStream(dmaTx_.stream);
     dmaRx_.dma->enableStream(dmaRx_.stream);
     spi_->enableTxDMA();
 
-    busy_ = true;
-    co_await sched_->waitUntil(pendingWaitToken_);
-    busy_ = false;
+    co_await sched_.waitUntil(pendingWaitToken_);
 
     spi_->waitUntilNotBusy();
     auto rxBytesLeft = dmaRx_.dma->getNumberOfData(dmaRx_.stream);
@@ -94,11 +86,21 @@ Task<bool> CoroSPI::transact(uint8_t* data, size_t len, TransactionType type) {
   }
 }
 
+Task<bool> CoroSPI::transact(uint8_t* data, size_t len, TransactionType type) {
+  co_await throttler_.enter();
+  bool success = co_await transactInner(data, len, type);
+  throttler_.leave();
+
+  co_return success;
+}
+
 Task<bool> CoroSPI::transact(GPIO::Pin pinCs, uint8_t* data, size_t len,
                              TransactionType type) {
+  co_await throttler_.enter();
   pinCs.gpio->clear(pinCs.pin);
-  auto success = co_await transact(data, len, type);
+  auto success = co_await transactInner(data, len, type);
   pinCs.gpio->set(pinCs.pin);
+  throttler_.leave();
 
   co_return success;
 }
@@ -106,7 +108,7 @@ Task<bool> CoroSPI::transact(GPIO::Pin pinCs, uint8_t* data, size_t len,
 void CoroSPI::handleTxDMAEvent(DMA::StreamEvent event) {
   switch (event.type) {
   case DMA::StreamEventType::TRANSFER_COMPLETE: {
-    sched_->postCompletion(pendingWaitToken_);
+    sched_.postCompletion(pendingWaitToken_);
   }
   }
 }

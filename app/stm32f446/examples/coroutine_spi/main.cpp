@@ -3,7 +3,8 @@
 #include <CoroSPI.h>
 #include <GPIO.h>
 
-CoroSPI spi;
+FixedSizeScheduler<16, 16> sched;
+CoroSPI spi{sched};
 
 Task<> transactionA() {
   uint8_t data[] = {0x1E, 0x00};
@@ -49,8 +50,6 @@ extern "C" void main() {
                         SPI::NSSMode::MANUAL);
   spi.enable(&SPI_2, DMA::Channel{&DMA_1, 4, 0}, DMA::Channel{&DMA_1, 3, 0});
 
-  FixedSizeScheduler<16, 16> sched;
-  spi.bindToScheduler(&sched);
   Task<> tasks[] = {transactionA(), transactionB()};
   sched.run();
 

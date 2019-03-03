@@ -52,6 +52,10 @@ struct Scheduler {
     }
   }
 
+  void enqueueTask(std::experimental::coroutine_handle<> coro) {
+    tasks_.push_back(coro);
+  }
+
 public:
   // schedule implementation
 
@@ -142,10 +146,6 @@ private:
       container::CircularBuffer<std::experimental::coroutine_handle<>>& tasks,
       size_t waitAreaSize, WaitEntry* waitArea)
       : tasks_(tasks), waitAreaSize_(waitAreaSize), waitArea_(waitArea) {}
-
-  void enqueueTask(std::experimental::coroutine_handle<> coro) {
-    tasks_.push_back(coro);
-  }
 
   template <size_t TaskQueueSize, size_t WaitAreaSize>
   friend struct FixedSizeScheduler;
