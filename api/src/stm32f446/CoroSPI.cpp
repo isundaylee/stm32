@@ -4,21 +4,17 @@ static const size_t CORO_SPI_USE_DMA_LENGTH_THRESHOLD = 20;
 
 using coro::Task;
 
-void CoroSPI::enable(SPI* spi, DMA::Channel dmaTx, DMA::Channel dmaRx) {
-  spi_ = spi;
-  dmaTx_ = dmaTx;
-  dmaRx_ = dmaRx;
+void CoroSPI::handleTxDMAEvent(DMA::StreamEvent event) {
+  switch (event.type) {
+  case DMA::StreamEventType::TRANSFER_COMPLETE: {
+    sched_.postCompletion(pendingWaitToken_);
+  }
+  }
+}
 
-  dmaTx.dma->configureStream(
-      dmaTx.stream, dmaTx.channel, DMA::Direction::MEM_TO_PERI, 0,
-      DMA::FIFOThreshold::DIRECT, false, DMA::Priority::HIGH, nullptr,
-      DMA::Size::BYTE, true, &spi_->getRaw()->DR, DMA::Size::BYTE, false,
-      CoroSPI::handleTxDMAEventWrapper, this);
-  dmaRx.dma->configureStream(
-      dmaRx.stream, dmaRx.channel, DMA::Direction::PERI_TO_MEM, 0,
-      DMA::FIFOThreshold::DIRECT, false, DMA::Priority::VERY_HIGH,
-      &spi_->getRaw()->DR, DMA::Size::BYTE, false, nullptr, DMA::Size::BYTE,
-      true, nullptr, nullptr);
+/* static */ void CoroSPI::handleTxDMAEventWrapper(DMA::StreamEvent event,
+                                                   void* context) {
+  reinterpret_cast<CoroSPI*>(context)->handleTxDMAEvent(event);
 }
 
 Task<bool> CoroSPI::transactInner(uint8_t* data, size_t len,
@@ -88,6 +84,23 @@ Task<bool> CoroSPI::transactInner(uint8_t* data, size_t len,
   }
 }
 
+void CoroSPI::enable(SPI* spi, DMA::Channel dmaTx, DMA::Channel dmaRx) {
+  spi_ = spi;
+  dmaTx_ = dmaTx;
+  dmaRx_ = dmaRx;
+
+  dmaTx.dma->configureStream(
+      dmaTx.stream, dmaTx.channel, DMA::Direction::MEM_TO_PERI, 0,
+      DMA::FIFOThreshold::DIRECT, false, DMA::Priority::HIGH, nullptr,
+      DMA::Size::BYTE, true, &spi_->getRaw()->DR, DMA::Size::BYTE, false,
+      CoroSPI::handleTxDMAEventWrapper, this);
+  dmaRx.dma->configureStream(
+      dmaRx.stream, dmaRx.channel, DMA::Direction::PERI_TO_MEM, 0,
+      DMA::FIFOThreshold::DIRECT, false, DMA::Priority::VERY_HIGH,
+      &spi_->getRaw()->DR, DMA::Size::BYTE, false, nullptr, DMA::Size::BYTE,
+      true, nullptr, nullptr);
+}
+
 Task<bool> CoroSPI::transact(uint8_t* data, size_t len, TransactionType type) {
   co_await throttler_.enter();
   bool success = co_await transactInner(data, len, type);
@@ -105,17 +118,4 @@ Task<bool> CoroSPI::transact(GPIO::Pin pinCs, uint8_t* data, size_t len,
   throttler_.leave();
 
   co_return success;
-}
-
-void CoroSPI::handleTxDMAEvent(DMA::StreamEvent event) {
-  switch (event.type) {
-  case DMA::StreamEventType::TRANSFER_COMPLETE: {
-    sched_.postCompletion(pendingWaitToken_);
-  }
-  }
-}
-
-/* static */ void CoroSPI::handleTxDMAEventWrapper(DMA::StreamEvent event,
-                                                   void* context) {
-  reinterpret_cast<CoroSPI*>(context)->handleTxDMAEvent(event);
 }

@@ -19,6 +19,15 @@ public:
     AUTO,
   };
 
+  CoroSPI(coro::Scheduler& sched) : sched_(sched), throttler_(sched_, 1) {}
+
+  void enable(SPI* spi, DMA::Channel dmaTx, DMA::Channel dmaRx);
+
+  coro::Task<bool> transact(uint8_t* data, size_t len,
+                            TransactionType type = TransactionType::AUTO);
+  coro::Task<bool> transact(GPIO::Pin pinCs, uint8_t* data, size_t len,
+                            TransactionType type = TransactionType::AUTO);
+
 private:
   SPI* spi_;
   DMA::Channel dmaTx_;
@@ -34,14 +43,4 @@ private:
 
   coro::Task<bool> transactInner(uint8_t* data, size_t len,
                                  TransactionType type = TransactionType::AUTO);
-
-public:
-  CoroSPI(coro::Scheduler& sched) : sched_(sched), throttler_(sched_, 1) {}
-
-  void enable(SPI* spi, DMA::Channel dmaTx, DMA::Channel dmaRx);
-
-  coro::Task<bool> transact(uint8_t* data, size_t len,
-                            TransactionType type = TransactionType::AUTO);
-  coro::Task<bool> transact(GPIO::Pin pinCs, uint8_t* data, size_t len,
-                            TransactionType type = TransactionType::AUTO);
 };
