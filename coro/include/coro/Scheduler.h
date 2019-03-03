@@ -2,6 +2,8 @@
 
 #include "coro/Support.h"
 
+#include "container/CircularBuffer.h"
+
 template <size_t TaskQueueSize, size_t WaitAreaSize> struct FixedSizeScheduler;
 
 struct Scheduler {
@@ -35,9 +37,9 @@ struct Scheduler {
       }
     }
 
-    if (taskHead_ != taskTail_) {
-      auto task = tasks_[taskHead_];
-      taskHead_ = (taskHead_ + 1) % taskQueueSize_;
+    if (!tasks_.empty()) {
+      auto task = tasks_.front();
+      tasks_.pop_front();
       task.resume();
       return false;
     }
@@ -124,8 +126,7 @@ public:
 
 private:
   // Task queue
-  size_t taskHead_ = 0, taskTail_ = 0, taskQueueSize_;
-  std::experimental::coroutine_handle<>* tasks_;
+  container::CircularBuffer<std::experimental::coroutine_handle<>>& tasks_;
 
   // Wait area
   struct WaitEntry {
@@ -137,21 +138,13 @@ private:
   size_t waitAreaSize_;
   WaitEntry* waitArea_;
 
-  Scheduler(size_t taskQueueSize, std::experimental::coroutine_handle<>* tasks,
-            size_t waitAreaSize, WaitEntry* waitArea)
-      : taskQueueSize_(taskQueueSize), tasks_(tasks),
-        waitAreaSize_(waitAreaSize), waitArea_(waitArea) {}
+  Scheduler(
+      container::CircularBuffer<std::experimental::coroutine_handle<>>& tasks,
+      size_t waitAreaSize, WaitEntry* waitArea)
+      : tasks_(tasks), waitAreaSize_(waitAreaSize), waitArea_(waitArea) {}
 
   void enqueueTask(std::experimental::coroutine_handle<> coro) {
-    auto newTail = (taskTail_ + 1) % taskQueueSize_;
-
-    if (newTail == taskHead_) {
-      // Full
-      abort();
-    }
-
-    tasks_[taskTail_] = coro;
-    taskTail_ = newTail;
+    tasks_.push_back(coro);
   }
 
   template <size_t TaskQueueSize, size_t WaitAreaSize>
@@ -160,10 +153,11 @@ private:
 
 template <size_t TaskQueueSize, size_t WaitAreaSize>
 struct FixedSizeScheduler : public Scheduler {
-  FixedSizeScheduler()
-      : Scheduler(TaskQueueSize, tasks_, WaitAreaSize, waitArea_) {}
+  FixedSizeScheduler() : Scheduler(tasks_, WaitAreaSize, waitArea_) {}
 
 private:
-  std::experimental::coroutine_handle<> tasks_[TaskQueueSize];
+  container::FixedSizeCircularBuffer<std::experimental::coroutine_handle<>,
+                                     TaskQueueSize>
+      tasks_;
   Scheduler::WaitEntry waitArea_[WaitAreaSize];
 };
