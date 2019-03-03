@@ -15,35 +15,13 @@ template <size_t QueueSize> struct FixedSizeThrottler;
 
 struct Throttler {
 public:
+  struct EnterAwaiter;
+
+  // Use FixedSizeThrottler to construct a Throttler
   Throttler() = delete;
 
-  struct EnterAwaiter {
-  public:
-    EnterAwaiter(Throttler& throt) : throt_(throt) {}
-
-    bool await_ready() { return throt_.limit_ > 0; }
-    void await_suspend(coroutine_handle<> coro) {
-      throt_.queue_.push_back(coro);
-    }
-    void await_resume() { throt_.limit_--; }
-
-  private:
-    Throttler& throt_;
-  };
-
-  auto enter() { return EnterAwaiter{*this}; }
-
-  void leave() {
-    if (queue_.empty()) {
-      limit_++;
-    } else {
-      auto next = queue_.front();
-      queue_.pop_front();
-      sched_.enqueueTask(next);
-    }
-  }
-
-  template <size_t> friend struct FixedSizeThrottler;
+  EnterAwaiter enter();
+  void leave();
 
 private:
   Scheduler& sched_;
@@ -53,6 +31,8 @@ private:
   Throttler(Scheduler& sched, size_t limit,
             CircularBuffer<coroutine_handle<>>& queue)
       : sched_(sched), limit_(limit), queue_(queue) {}
+
+  template <size_t> friend struct FixedSizeThrottler;
 };
 
 template <size_t QueueSize> struct FixedSizeThrottler : public Throttler {
@@ -62,4 +42,16 @@ public:
 
 private:
   FixedSizeCircularBuffer<coroutine_handle<>, QueueSize> queue_;
+};
+
+struct Throttler::EnterAwaiter {
+public:
+  EnterAwaiter(Throttler& throt) : throt_(throt) {}
+
+  bool await_ready() { return throt_.limit_ > 0; }
+  void await_suspend(coroutine_handle<> coro) { throt_.queue_.push_back(coro); }
+  void await_resume() { throt_.limit_--; }
+
+private:
+  Throttler& throt_;
 };
