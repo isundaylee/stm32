@@ -4,6 +4,10 @@
 
 #include <Timer.h>
 
+using coro::FixedSizeScheduler;
+using coro::Scheduler;
+using coro::Task;
+
 FixedSizeScheduler<16, 16> sched;
 
 void handleTimerInterrupt(void* context) {

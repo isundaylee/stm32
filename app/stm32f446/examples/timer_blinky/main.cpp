@@ -3,7 +3,7 @@
 #include <GPIO.h>
 #include <Timer.h>
 
-void timerHandler() {
+void timerHandler(void*) {
   static bool value = 0;
 
   value = !value;
@@ -23,7 +23,7 @@ extern "C" void main() {
   GPIO_A.enable();
   GPIO_A.setMode(1, GPIO::PinMode::OUTPUT);
 
-  Timer_2.enable(1000, 8000, timerHandler);
+  Timer_2.enable(1000, 8000, Timer::Action::PERIODIC, timerHandler, nullptr);
 
   while (true) {
   }

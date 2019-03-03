@@ -91,7 +91,7 @@ void handleEthernetEvent(enc28j60::Event event, void*) {
   }
 }
 
-void handleTimerInterrupt() { events.push(Event::TIMER_INTERRUPT); }
+void handleTimerInterrupt(void*) { events.push(Event::TIMER_INTERRUPT); }
 
 static void initializeEthernet() {
   eth.enable(&SPI_2, GPIO::Pin{&GPIO_B, 12}, GPIO::Pin{&GPIO_C, 9},
@@ -109,7 +109,7 @@ static void initializeEthernet() {
   eth.enableRx();
 
   Timer_2.enable(6000, Clock::getAPB1TimerFrequency() / 6000 / 30,
-                 handleTimerInterrupt);
+                 Timer::Action::PERIODIC, handleTimerInterrupt, nullptr);
 }
 
 uint16_t calculateChecksum(uint8_t const* data, size_t len) {

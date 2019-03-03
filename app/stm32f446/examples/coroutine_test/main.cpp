@@ -2,6 +2,8 @@
 
 #include <Coroutine.h>
 
+using coro::Generator;
+
 Generator<int> f(int limit) {
   for (int i = 0; i <= limit; i++) {
     co_yield i;

@@ -97,7 +97,7 @@ void handleEthernetEvent(enc28j60::Event event, void*) {
   }
 }
 
-void handleTimerInterrupt() { events.push(Event::TIMER_INTERRUPT); }
+void handleTimerInterrupt(void*) { events.push(Event::TIMER_INTERRUPT); }
 
 static void initializeEthernet(uint8_t const* macAddress) {
   eth.enable(&SPI_2, GPIO::Pin{&GPIO_B, 12}, GPIO::Pin{&GPIO_C, 9},
@@ -116,7 +116,7 @@ static void initializeEthernet(uint8_t const* macAddress) {
   eth.enableRx();
 
   Timer_2.enable(6000, Clock::getAPB1TimerFrequency() / 6000,
-                 handleTimerInterrupt);
+                 Timer::Action::PERIODIC, handleTimerInterrupt, nullptr);
 }
 
 static void processEvents() {
