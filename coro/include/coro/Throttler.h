@@ -11,6 +11,8 @@ using container::CircularBuffer;
 using container::FixedSizeCircularBuffer;
 using std::experimental::coroutine_handle;
 
+namespace coro {
+
 struct Throttler {
 public:
   struct EnterAwaiter;
@@ -44,3 +46,5 @@ private:
 
   friend Throttler;
 };
+
+} // namespace coro

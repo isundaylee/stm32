@@ -2,6 +2,8 @@
 
 static const size_t CORO_SPI_USE_DMA_LENGTH_THRESHOLD = 20;
 
+using coro::Task;
+
 void CoroSPI::enable(SPI* spi, DMA::Channel dmaTx, DMA::Channel dmaRx) {
   spi_ = spi;
   dmaTx_ = dmaTx;

@@ -1,5 +1,7 @@
 #include "coro/Throttler.h"
 
+namespace coro {
+
 Throttler::EnterAwaiter Throttler::enter() { return EnterAwaiter{*this}; }
 
 void Throttler::leave() {
@@ -17,3 +19,5 @@ void Throttler::EnterAwaiter::await_suspend(coroutine_handle<> coro) {
   waitNext_ = throt_.waitHead_;
   throt_.waitHead_ = this;
 }
+
+} // namespace coro

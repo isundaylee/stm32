@@ -4,6 +4,8 @@
 
 #include <stdlib.h>
 
+namespace coro {
+
 namespace detail {
 
 template <typename T> struct TaskPromise;
@@ -105,3 +107,5 @@ template <typename T> auto TaskPromise<T>::get_return_object() {
 }
 
 } // namespace detail
+
+} // namespace coro

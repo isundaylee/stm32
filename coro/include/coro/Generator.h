@@ -4,6 +4,8 @@
 
 #include "coro/Support.h"
 
+namespace coro {
+
 template <typename T> struct Generator {
 public:
   struct promise_type {
@@ -72,3 +74,5 @@ public:
   Iterator begin() { return Iterator{*this, false}; }
   Iterator end() { return Iterator{*this, true}; }
 };
+
+} // namespace coro

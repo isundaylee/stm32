@@ -3,6 +3,9 @@
 #include <CoroSPI.h>
 #include <GPIO.h>
 
+using coro::FixedSizeScheduler;
+using coro::Task;
+
 FixedSizeScheduler<16, 16> sched;
 CoroSPI spi{sched};
 

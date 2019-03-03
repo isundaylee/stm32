@@ -4,6 +4,8 @@
 
 #include "container/CircularBuffer.h"
 
+namespace coro {
+
 template <size_t TaskQueueSize, size_t WaitAreaSize> struct FixedSizeScheduler;
 
 struct Scheduler {
@@ -161,3 +163,5 @@ private:
       tasks_;
   Scheduler::WaitEntry waitArea_[WaitAreaSize];
 };
+
+} // namespace coro
