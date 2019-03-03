@@ -25,7 +25,7 @@ private:
   DMA::Channel dmaRx_;
 
   Scheduler& sched_;
-  FixedSizeThrottler<16> throttler_;
+  Throttler throttler_;
 
   Scheduler::WaitToken pendingWaitToken_;
 
