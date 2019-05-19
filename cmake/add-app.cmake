@@ -80,7 +80,9 @@ function(add_app)
             USES_TERMINAL
             )
     elseif(${ARG_DEVICE_NAME} STREQUAL "STM32L011")
-        # TODO!!!!!!!!!!!!!!
+        add_custom_target(flash_${ARG_APP_NAME}
+            COMMAND st-flash --reset write ${ARG_APP_NAME}.bin 0x08000000
+            DEPENDS ${ARG_APP_NAME}.bin)
     else()
         message(FATAL_ERROR "Unknown device ${ARG_DEVICE_NAME}")
     endif()

@@ -38,9 +38,9 @@ add_compile_options(
     -fcoroutines-ts
 
     -mthumb
-    -mcpu=cortex-m4
+    -mcpu=cortex-m0
     -mfloat-abi=soft
-    -mfpu=fpv4-sp-d16
+    -mfpu=none
     -fno-exceptions
 
     -O3
@@ -54,7 +54,7 @@ add_compile_options(
     )
 
 link_directories(
-    ${ARM_TOOLCHAIN_DIR}/lib/gcc/arm-none-eabi/7.3.1/thumb/v7-m
+    ${ARM_TOOLCHAIN_DIR}/lib/gcc/arm-none-eabi/7.3.1/thumb/v6-m
     )
 
 set(CMAKE_CXX_LINK_EXECUTABLE
