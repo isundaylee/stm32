@@ -40,7 +40,7 @@ function(add_app)
 
     target_link_options(${ARG_APP_NAME}
         PRIVATE
-            -T ${CMAKE_CURRENT_SOURCE_DIR}/../../../common/LinkerScript.lds
+            -T ${PROJECT_SOURCE_DIR}/app/common/LinkerScript-${ARG_DEVICE_NAME}.lds
             -nostdlib
             -ffreestanding
         )
@@ -79,6 +79,8 @@ function(add_app)
             COMMAND ./gdb.sh
             USES_TERMINAL
             )
+    elseif(${ARG_DEVICE_NAME} STREQUAL "STM32L011")
+        # TODO!!!!!!!!!!!!!!
     else()
         message(FATAL_ERROR "Unknown device ${ARG_DEVICE_NAME}")
     endif()

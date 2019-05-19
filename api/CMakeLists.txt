@@ -41,3 +41,39 @@ target_compile_features(STM32F446Lib
     PUBLIC
         cxx_std_17
     )
+
+################################################################################
+
+add_library(STM32L011Lib STATIC
+    src/stm32l011/StartupL011.cpp
+    src/stm32l011/UtilsL011.cpp
+    src/stm32l011/Clock.cpp
+    src/stm32l011/GPIO.cpp
+    src/stm32l011/I2C.cpp
+    src/stm32l011/RealTimeClock.cpp
+    src/stm32l011/Tick.cpp
+    src/stm32l011/Timer.cpp
+    )
+
+target_include_directories(STM32L011Lib
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/stm32l011
+    )
+
+target_link_libraries(STM32L011Lib
+    PUBLIC
+        CMSIS
+    PRIVATE
+        gcc
+    )
+
+target_compile_options(STM32L011Lib
+    PRIVATE
+        -ffreestanding
+    )
+
+target_compile_features(STM32L011Lib
+    PUBLIC
+        cxx_std_17
+    )

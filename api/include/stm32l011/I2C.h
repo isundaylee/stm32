@@ -1,7 +1,7 @@
 #pragma once
 
 #include <DeviceHeader.h>
-#include <Utils.h>
+#include <UtilsL011.h>
 
 class I2C {
 private:
@@ -20,7 +20,7 @@ public:
     I2C1_PA13,
     I2C1_PB7,
   };
-  
+
   I2C(I2C_TypeDef* i2c) { i2c_ = i2c; }
 
   I2C(I2C&& move) = delete;
