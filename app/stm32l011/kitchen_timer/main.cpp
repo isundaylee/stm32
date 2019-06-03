@@ -9,6 +9,8 @@
 
 #include "DigitBitmaps.h"
 
+const static size_t STOP_DELAY = 1;
+
 OLED<0x3C, 64, 128> oled(I2C_1);
 
 enum class State {
@@ -20,6 +22,7 @@ enum class State {
 bool isLEDOn = false;
 State state = State::IDLE;
 size_t countdown = 0;
+size_t uptime = 0;
 
 static const uint32_t PIN_OLED_ON = 7;
 
@@ -156,6 +159,8 @@ void timerHandler() {
 }
 
 void wakeupTimerHandler() {
+  uptime++;
+
   switch (state) {
   case State::IDLE:
     break;
@@ -248,10 +253,6 @@ extern "C" void main() {
 
   Timer_2.enable();
 
-  for (int i = 0; i < 5000000; i++) {
-    asm volatile("nop");
-  }
-
   GPIO_A.setMode(PIN_OLED_ON, GPIO::PinMode::OUTPUT);
 
   GPIO_A.setMode(PIN_BUT_1, GPIO::PinMode::INPUT);
@@ -293,7 +294,7 @@ extern "C" void main() {
       break;
     }
 
-    if (state != State::FIRING) {
+    if (uptime >= STOP_DELAY && state != State::FIRING) {
       stop();
     }
   }
