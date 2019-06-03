@@ -9,6 +9,8 @@
 
 #include "DigitBitmaps.h"
 
+#define DEBUG_MODE 1
+
 const static size_t STOP_DELAY = 1;
 
 OLED<0x3C, 64, 128> oled(I2C_1);
@@ -30,6 +32,12 @@ static const uint32_t PIN_BUT_1 = 1;
 static const uint32_t PIN_BUT_2 = 2;
 static const uint32_t PIN_BUT_3 = 3;
 static const uint32_t PIN_BUT_4 = 4;
+
+#if DEBUG_MODE
+// Debug mode uses button 3 and button 4's GPIO pins as output debug pins.
+static const uint32_t DEBUG_PIN_1 = PIN_BUT_3;
+static const uint32_t DEBUG_PIN_2 = PIN_BUT_4;
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 // Rendering code
@@ -65,6 +73,14 @@ uint8_t const* digitToSprite(int digit) {
 void renderCountdown(size_t countdown) {
   size_t minutes = countdown / 60;
   size_t seconds = countdown % 60;
+
+#if DEBUG_MODE
+  for (size_t i = 0; i < countdown; i++) {
+    GPIO_A.clear(DEBUG_PIN_2);
+    DELAY(5);
+    GPIO_A.set(DEBUG_PIN_2);
+  }
+#endif
 
   oled.clearScreen();
   oled.sprite(12, 0, 40, 24, digitToSprite(minutes / 10));
@@ -159,6 +175,12 @@ void timerHandler() {
 }
 
 void wakeupTimerHandler() {
+#if DEBUG_MODE
+  GPIO_A.clear(DEBUG_PIN_1);
+  DELAY(10);
+  GPIO_A.set(DEBUG_PIN_1);
+#endif
+
   uptime++;
 
   switch (state) {
@@ -265,6 +287,13 @@ extern "C" void main() {
   GPIO_A.enableExternalInterrupt(PIN_BUT_2, GPIO::TriggerDirection::BOTH,
                                  button2Handler);
 
+#if DEBUG_MODE
+  GPIO_A.setMode(DEBUG_PIN_1, GPIO::PinMode::OUTPUT);
+  GPIO_A.set(DEBUG_PIN_1);
+
+  GPIO_A.setMode(DEBUG_PIN_2, GPIO::PinMode::OUTPUT);
+  GPIO_A.set(DEBUG_PIN_2);
+#else
   GPIO_A.setMode(PIN_BUT_3, GPIO::PinMode::INPUT);
   GPIO_A.setPullDirection(PIN_BUT_3, GPIO::PullDirection::PULL_UP);
   GPIO_A.enableExternalInterrupt(PIN_BUT_3, GPIO::TriggerDirection::BOTH,
@@ -274,6 +303,7 @@ extern "C" void main() {
   GPIO_A.setPullDirection(PIN_BUT_4, GPIO::PullDirection::PULL_UP);
   GPIO_A.enableExternalInterrupt(PIN_BUT_4, GPIO::TriggerDirection::BOTH,
                                  button4Handler);
+#endif
 
   RealTimeClock::enable(RealTimeClock::RTCClock::LSI);
   RealTimeClock::setupWakeupTimer(1, RealTimeClock::WakeupTimerClock::CK_SPRE,
