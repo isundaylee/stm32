@@ -21,10 +21,11 @@ enum class State {
   FIRING,
 };
 
-bool isLEDOn = false;
-State state = State::IDLE;
-size_t countdown = 0;
-size_t uptime = 0;
+volatile bool isLEDOn = false;
+volatile State state = State::IDLE;
+volatile size_t countdown = 0;
+volatile size_t uptime = 0;
+volatile bool needsRerender;
 
 static const uint32_t PIN_OLED_ON = 7;
 
@@ -187,6 +188,7 @@ void wakeupTimerHandler() {
   case State::IDLE:
     break;
   case State::COUNTING:
+    needsRerender = true;
     if (--countdown == 0) {
       state = State::FIRING;
       countdown = 10;
@@ -194,6 +196,7 @@ void wakeupTimerHandler() {
     }
     break;
   case State::FIRING:
+    needsRerender = true;
     if (--countdown == 0) {
       state = State::IDLE;
       Timer_2.stop();
@@ -207,11 +210,13 @@ static void addTime(size_t time) {
   case State::IDLE:
   case State::FIRING:
     countdown = time;
+    needsRerender = true;
     state = State::COUNTING;
     Timer_2.stop();
     break;
   case State::COUNTING:
     countdown += time;
+    needsRerender = true;
     break;
   }
 }
@@ -310,6 +315,8 @@ extern "C" void main() {
                                   wakeupTimerHandler);
 
   while (true) {
+    needsRerender = false;
+
     switch (state) {
     case State::IDLE:
       ensureOLEDOff();
@@ -322,6 +329,12 @@ extern "C" void main() {
       ensureOLEDOn();
       rerender();
       break;
+    }
+
+    if (needsRerender) {
+      // The countdown has changed during our last rendering.
+      // We should not go to sleep yet, so that we can rerender.
+      continue;
     }
 
     if (uptime >= STOP_DELAY && state != State::FIRING) {
