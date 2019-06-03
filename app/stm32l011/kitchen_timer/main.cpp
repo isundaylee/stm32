@@ -9,7 +9,7 @@
 
 #include "DigitBitmaps.h"
 
-#define DEBUG_MODE 1
+#define DEBUG_MODE 0
 
 const static size_t STOP_DELAY = 1;
 
